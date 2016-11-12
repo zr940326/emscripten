@@ -2266,7 +2266,7 @@ The current type of b is: 9
 
   def can_dlfcn(self):
     if Settings.ALLOW_MEMORY_GROWTH == 1: return self.skip('no dlfcn with memory growth yet')
-    if self.is_wasm(): return self.skip('no shared modules in wasm')
+    if self.is_wasm_backend(): return self.skip('no shared modules in wasm backend')
     return True
 
   def prep_dlfcn_lib(self):

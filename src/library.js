@@ -1601,16 +1601,32 @@ LibraryManager.library = {
       if (!target || target.isFolder || target.isDevice) {
         DLFCN.errorMsg = 'Could not find dynamic lib: ' + filename;
         return 0;
-      } else {
-        FS.forceLoadFile(target);
-        var lib_data = FS.readFile(filename, { encoding: 'utf8' });
       }
+      FS.forceLoadFile(target);
 
+      var lib_module;
       try {
-        var lib_module = eval(lib_data)(
+#if BINARYEN
+        // the shared library is a wasm module
+        var lib_data = FS.readFile(filename, { encoding: 'binary' }); // XXX the filename here is of the JS. do we need a JS file?
+        var env = Module['asmLibraryArg'];
+        env['memoryBase'] = Runtime.alignMemory(getMemory(10240)); // XXX TODO: get the size of the memory initializer
+        env['tableBase'] = env['table'].length; // XXX TODO
+        Module.printErr('using memoryBase ' + env['memoryBase'] + ', tableBase ' + env['tableBase']);
+        var info = {
+          global: Module['asmGlobalArg'],
+          env: env
+        };
+        var wasm = new WebAssembly.Instance(new WebAssembly.Module(lib_data), info);
+        lib_module = wasm.exports;
+#else
+        // the shared library is a JS file, which we eval
+        var lib_data = FS.readFile(filename, { encoding: 'utf8' });
+        lib_module = eval(lib_data)(
           Runtime.alignFunctionTables(),
           Module
         );
+#endif
       } catch (e) {
 #if ASSERTIONS
         Module.printErr('Error in loading dynamic library: ' + e);
