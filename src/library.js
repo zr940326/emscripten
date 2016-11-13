@@ -1605,7 +1605,7 @@ LibraryManager.library = {
       FS.forceLoadFile(target);
 
       var lib_module;
-//      try {
+      try {
 #if BINARYEN
         // the shared library is a shared wasm library, a '.wso' (see tools/shared.py WebAssembly.make_shared_library)
         var lib_data = FS.readFile(filename, { encoding: 'binary' });
@@ -1645,13 +1645,13 @@ LibraryManager.library = {
           Module
         );
 #endif
-//      } catch (e) {
+      } catch (e) {
 #if ASSERTIONS
         Module.printErr('Error in loading dynamic library: ' + e);
 #endif
-//        DLFCN.errorMsg = 'Could not evaluate dynamic lib: ' + filename;
-//        return 0;
-//      }
+        DLFCN.errorMsg = 'Could not evaluate dynamic lib: ' + filename;
+        return 0;
+      }
 
       // Not all browsers support Object.keys().
       var handle = 1;
