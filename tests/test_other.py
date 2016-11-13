@@ -2555,6 +2555,39 @@ void wakaw::Cm::RasterBase<wakaw::watwat::Polocator>::merbine1<wakaw::Cm::Raster
     try_delete(path_from_root('tests', 'Module-exports', 'test.js.map'))
     try_delete(path_from_root('tests', 'Module-exports', 'test.js.mem'))
 
+  def test_node_catch_exit(self):
+    # Test that in node.js exceptions are not caught if NODEJS_EXIT_CATCH=0
+    if NODE_JS not in JS_ENGINES:
+      return
+
+    open(os.path.join(self.get_dir(), 'count.c'), 'w').write('''
+      #include <string.h>
+      int count(const char *str) {
+          return (int)strlen(str);
+      }
+    ''')
+
+    open(os.path.join(self.get_dir(), 'index.js'), 'w').write('''
+      const count = require('./count.js');
+
+      console.log(xxx); //< here is the ReferenceError
+    ''')
+
+    reference_error_text = 'console.log(xxx); //< here is the ReferenceError';
+
+    subprocess.check_call([PYTHON, EMCC, os.path.join(self.get_dir(), 'count.c'), '-o', 'count.js'])
+
+    # Check that the ReferenceError is caught and rethrown and thus the original error line is masked
+    self.assertNotContained(reference_error_text,
+                            run_js ('index.js', engine=NODE_JS, stderr=STDOUT, assert_returncode=None))
+
+    subprocess.check_call([PYTHON, EMCC, os.path.join(self.get_dir(), 'count.c'), '-o', 'count.js', '-s', 'NODEJS_CATCH_EXIT=0'])
+
+    # Check that the ReferenceError is not caught, so we see the error properly
+    self.assertContained(reference_error_text,
+                         run_js ('index.js', engine=NODE_JS, stderr=STDOUT, assert_returncode=None))
+
+
   def test_fs_stream_proto(self):
     open('src.cpp', 'wb').write(r'''
 #include <stdio.h>
@@ -6899,8 +6932,8 @@ int main() {
         print args, expect
         try_delete('a.out.js')
         with clean_write_access_to_canonical_temp_dir():
-          output, err = Popen([PYTHON, EMCC, path_from_root('tests', 'hello_world.cpp')] + args + ['-s', 'BINARYEN=1'], stdout=PIPE, stderr=PIPE).communicate()
-        assert expect == (' -emscripten-precise-f32' in err)
+          output, err = Popen([PYTHON, EMCC, path_from_root('tests', 'hello_world.cpp'), '-s', 'BINARYEN=1', '-s', 'BINARYEN_METHOD="interpret-binary"'] + args, stdout=PIPE, stderr=PIPE).communicate()
+        assert expect == (' -emscripten-precise-f32' in err), err
         self.assertContained('hello, world!', run_js('a.out.js'))
     finally:
       del os.environ['EMCC_DEBUG']
@@ -6940,6 +6973,36 @@ int main() {
     # and with memory growth, all should be good
     subprocess.check_call([PYTHON, EMCC, path_from_root('tests', 'hello_world.cpp'), '-s', 'WASM=1', '-s', 'BINARYEN_METHOD="native-wasm"', '-s', 'TOTAL_MEMORY=' + str(16*1024*1024), '--pre-js', 'pre.js', '-s', 'ALLOW_MEMORY_GROWTH=1'])
     self.assertContained('hello, world!', run_js('a.out.js', engine=SPIDERMONKEY_ENGINE))
+
+  def test_binaryen_default_method(self):
+    if SPIDERMONKEY_ENGINE not in JS_ENGINES: return self.skip('cannot run without spidermonkey')
+    subprocess.check_call([PYTHON, EMCC, path_from_root('tests', 'hello_world.cpp'), '-s', 'WASM=1'])
+    # might or might not fail, we don't care, just check which method is tried
+    out = run_js('a.out.js', engine=SPIDERMONKEY_ENGINE, full_output=True, stderr=PIPE, assert_returncode=None)
+    self.assertContained('trying binaryen method: native-wasm', out) # native is the default
+    assert out.count('trying binaryen method') == 1, 'must not try any other method'
+
+  def test_binaryen_mem(self):
+    for args, expect_initial, expect_max in [
+        (['-s', 'TOTAL_MEMORY=20971520'], 320, 320),
+        (['-s', 'TOTAL_MEMORY=20971520', '-s', 'ALLOW_MEMORY_GROWTH=1'], 320, None),
+        (['-s', 'TOTAL_MEMORY=20971520',                                '-s', 'BINARYEN_MEM_MAX=41943040'], 320, 640),
+        (['-s', 'TOTAL_MEMORY=20971520', '-s', 'ALLOW_MEMORY_GROWTH=1', '-s', 'BINARYEN_MEM_MAX=41943040'], 320, 640),
+      ]:
+      cmd = [PYTHON, EMCC, path_from_root('tests', 'hello_world.c'), '-s', 'WASM=1', '-O2', '-s', 'BINARYEN_METHOD="interpret-s-expr"'] + args
+      print ' '.join(cmd)
+      subprocess.check_call(cmd)
+      wast = open('a.out.wast').read()
+      lines = wast.split('\n')
+      for line in lines:
+        if '(import "env" "memory" (memory ' in line:
+          parts = line.strip().replace('(', '').replace(')', '').split(' ')
+          print parts
+          assert parts[5] == str(expect_initial)
+          if not expect_max:
+            assert len(parts) == 6
+          else:
+            assert parts[6] == str(expect_max)
 
   def test_wasm_targets(self):
     for f in ['a.wasm', 'a.wast']:
