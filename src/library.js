@@ -1607,11 +1607,18 @@ LibraryManager.library = {
       var lib_module;
       try {
 #if BINARYEN
-        // the shared library is a wasm module
-        var lib_data = FS.readFile(filename, { encoding: 'binary' }); // XXX the filename here is of the JS. do we need a JS file?
+        // the shared library is a shared wasm library, a '.wso' (see tools/shared.py WebAssembly.make_shared_library)
+        var lib_data = FS.readFile(filename, { encoding: 'binary' });
+        var int32View = new Uint32Array(lib_data);
+        assert(int32View[0] == 0x6f737700); // \0wso
+        var memorySize = int32View[1];
+        var tableSize = int32View[3];
+        Module.printErr('loading module has memorySize ' + memorySize + ', tableSize ' + tableSize);
+        var wasm = new Uint8Array(lib_data.buffer).subarray(20);
         var env = Module['asmLibraryArg'];
-        env['memoryBase'] = Runtime.alignMemory(getMemory(10240)); // XXX TODO: get the size of the memory initializer
-        env['tableBase'] = env['table'].length; // XXX TODO
+        env['memoryBase'] = Runtime.alignMemory(getMemory(memorySize));
+        env['tableBase'] = env['table'].length;
+        env['table'].grow(tableSize);
         Module.printErr('using memoryBase ' + env['memoryBase'] + ', tableBase ' + env['tableBase']);
         var info = {
           global: Module['asmGlobalArg'],
