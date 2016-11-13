@@ -1611,7 +1611,7 @@ LibraryManager.library = {
         var lib_data = FS.readFile(filename, { encoding: 'binary' });
         if (!(lib_data instanceof Uint8Array)) lib_data = new Uint8Array(lib_data);
         print('libfile ' + filename + ' size: ' + lib_data.length);
-        var int32View = new Uint32Array(new Uint8Array(lib_data.subarray(0, 20)).buffer);
+        var int32View = new Uint32Array(new Uint8Array(lib_data.subarray(0, 24)).buffer);
         assert(int32View[0] == 0x6f737700); // \0wso
         var memorySize = int32View[1];
         var tableSize = int32View[3];
@@ -1628,7 +1628,7 @@ LibraryManager.library = {
           global: Module['asmGlobalArg'],
           env: env
         };
-        var wasm = new WebAssembly.Instance(new WebAssembly.Module(lib_data), info);
+        var wasm = new WebAssembly.Instance(new WebAssembly.Module(wasm), info);
         lib_module = wasm.exports;
 #else
         // the shared library is a JS file, which we eval
