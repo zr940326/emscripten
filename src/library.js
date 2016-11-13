@@ -1624,6 +1624,7 @@ LibraryManager.library = {
         env['tableBase'] = env['table'].length;
         Module.printErr('using memoryBase ' + env['memoryBase'] + ', tableBase ' + env['tableBase']);
         env['table'].grow(tableSize);
+        Module.printErr('table is now of size ' + env['table'].length);
         // copy currently exported symbols so the new module can import them
         for (var x in Module) {
           if (!(x in env)) {
