@@ -1622,8 +1622,14 @@ LibraryManager.library = {
         var env = Module['asmLibraryArg'];
         env['memoryBase'] = Runtime.alignMemory(getMemory(memorySize));
         env['tableBase'] = env['table'].length;
-        env['table'].grow(tableSize);
         Module.printErr('using memoryBase ' + env['memoryBase'] + ', tableBase ' + env['tableBase']);
+        env['table'].grow(tableSize);
+        // copy currently exported symbols so the new module can import them
+        for (var x in Module) {
+          if (!(x in env)) {
+            env[x] = Module[x];
+          }
+        }
         var info = {
           global: Module['asmGlobalArg'],
           env: env
