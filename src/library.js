@@ -1620,8 +1620,9 @@ LibraryManager.library = {
         var wasm = lib_data.subarray(20);
         print('wasm binary size: ' + wasm.length);
         var env = Module['asmLibraryArg'];
-        env['memoryBase'] = Runtime.alignMemory(getMemory(memorySize));
-        env['tableBase'] = env['table'].length;
+        // TODO: use only memoryBase and tableBase, need to update asm.js backend
+        env['memoryBase'] = env['gb'] = Runtime.alignMemory(getMemory(memorySize));
+        env['tableBase'] = env['tb'] = env['table'].length;
         Module.printErr('using memoryBase ' + env['memoryBase'] + ', tableBase ' + env['tableBase']);
         env['table'].grow(tableSize);
         Module.printErr('table is now of size ' + env['table'].length);
