@@ -127,6 +127,8 @@ def get_and_parse_backend(infile, settings, temp_files, DEBUG):
         backend_args += ['-emscripten-global-base=0']
       elif settings['GLOBAL_BASE'] >= 0:
         backend_args += ['-emscripten-global-base=%d' % settings['GLOBAL_BASE']]
+      if settings['SIDE_MODULE']:
+        backend_args += ['-emscripten-side-module']
       backend_args += ['-O' + str(settings['OPT_LEVEL'])]
       if settings['DISABLE_EXCEPTION_CATCHING'] != 1:
         backend_args += ['-enable-emscripten-cxx-exceptions']
