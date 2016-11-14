@@ -1624,6 +1624,7 @@ LibraryManager.library = {
         env['memoryBase'] = env['gb'] = Runtime.alignMemory(getMemory(memorySize));
         env['tableBase'] = env['tb'] = env['table'].length;
         //Module.printErr('using memoryBase ' + env['memoryBase'] + ', tableBase ' + env['tableBase']);
+        //Module.printErr('growing table from size ' + env['table'].length + ' by ' + tableSize);
         env['table'].grow(tableSize);
         //Module.printErr('table is now of size ' + env['table'].length);
         // copy currently exported symbols so the new module can import them

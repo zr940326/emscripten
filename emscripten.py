@@ -699,7 +699,10 @@ function _emscripten_asm_const_%s(%s) {
       asm_setup += 'var setTempRet0 = Runtime.setTempRet0, getTempRet0 = Runtime.getTempRet0;\n'
 
     if settings['BINARYEN']:
-      asm_setup += "\nModule['wasmTableSize'] = %d;\n" % sum(map(lambda table: table.count(',') + 1, last_forwarded_json['Functions']['tables'].values()))
+      table_size = sum(map(lambda table: table.count(',') + 1, last_forwarded_json['Functions']['tables'].values()))
+      asm_setup += "\nModule['wasmTableSize'] = %d;\n" % table_size
+      if not settings['EMULATED_FUNCTION_POINTERS']:
+        asm_setup += "\nModule['wasmMaxTableSize'] = %d;\n" % table_size
 
     # See if we need ASYNCIFY functions
     # We might not need them even if ASYNCIFY is enabled
