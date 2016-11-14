@@ -2213,7 +2213,7 @@ class WebAssembly:
     # find the sizes, using the mem file and the data in the js
     mem_size = 0
     if os.path.exists(mem_file):
-      mem_size = os.stat('test.data').st_size
+      mem_size = os.stat(mem_file).st_size
     js = open(js_file).read()
     m = re.search("Module\['wasmTableSize'\] = (\d+);", js)
     table_size = 0
