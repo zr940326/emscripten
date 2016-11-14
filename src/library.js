@@ -1635,7 +1635,11 @@ LibraryManager.library = {
           global: Module['asmGlobalArg'],
           env: env
         };
-        var wasm = new WebAssembly.Instance(new WebAssembly.Module(wasm), info);
+        wasm = new WebAssembly.Instance(new WebAssembly.Module(wasm), info);
+        // initialize the module
+        if (wasm['__start_module']) {
+          wasm['__start_module']();
+        }
         lib_module = wasm.exports;
 #else
         // the shared library is a JS file, which we eval

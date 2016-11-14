@@ -1940,9 +1940,16 @@ addOnPreRun(function() {
       Runtime.loadDynamicLibrary(lib);
     });
   }
+#if BINARYEN == 0
   if (asm['runPostSets']) {
     asm['runPostSets']();
   }
+#else
+  // wasm shared modules have a __start_module which does their entire init process
+  if (asm['__start_module']) {
+    asm['__start_module']();
+  }
+#endif
 });
 
 #if ASSERTIONS
