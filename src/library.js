@@ -1636,11 +1636,12 @@ LibraryManager.library = {
           env: env
         };
         wasm = new WebAssembly.Instance(new WebAssembly.Module(wasm), info);
-        // initialize the module
-        if (wasm['__start_module']) {
-          wasm['__start_module']();
-        }
         lib_module = wasm.exports;
+        // initialize the module
+        if (lib_module['__start_module']) {
+          Module.printErr('call side module __start_module');
+          lib_module['__start_module']();
+        }
 #else
         // the shared library is a JS file, which we eval
         var lib_data = FS.readFile(filename, { encoding: 'utf8' });
