@@ -1610,22 +1610,22 @@ LibraryManager.library = {
         // the shared library is a shared wasm library, a '.wso' (see tools/shared.py WebAssembly.make_shared_library)
         var lib_data = FS.readFile(filename, { encoding: 'binary' });
         if (!(lib_data instanceof Uint8Array)) lib_data = new Uint8Array(lib_data);
-        print('libfile ' + filename + ' size: ' + lib_data.length);
+        //Module.printErr('libfile ' + filename + ' size: ' + lib_data.length);
         var int32View = new Uint32Array(new Uint8Array(lib_data.subarray(0, 24)).buffer);
         assert(int32View[0] == 0x6f737700); // \0wso
         var memorySize = int32View[1];
         var tableSize = int32View[3];
         assert(int32View[5] == 0x6d736100); // \0asm
-        Module.printErr('loading module has memorySize ' + memorySize + ', tableSize ' + tableSize);
+        //Module.printErr('loading module has memorySize ' + memorySize + ', tableSize ' + tableSize);
         var wasm = lib_data.subarray(20);
-        print('wasm binary size: ' + wasm.length);
+        //Module.printErr('wasm binary size: ' + wasm.length);
         var env = Module['asmLibraryArg'];
         // TODO: use only memoryBase and tableBase, need to update asm.js backend
         env['memoryBase'] = env['gb'] = Runtime.alignMemory(getMemory(memorySize));
         env['tableBase'] = env['tb'] = env['table'].length;
-        Module.printErr('using memoryBase ' + env['memoryBase'] + ', tableBase ' + env['tableBase']);
+        //Module.printErr('using memoryBase ' + env['memoryBase'] + ', tableBase ' + env['tableBase']);
         env['table'].grow(tableSize);
-        Module.printErr('table is now of size ' + env['table'].length);
+        //Module.printErr('table is now of size ' + env['table'].length);
         // copy currently exported symbols so the new module can import them
         for (var x in Module) {
           if (!(x in env)) {
@@ -1640,7 +1640,7 @@ LibraryManager.library = {
         lib_module = wasm.exports;
         // initialize the module
         if (lib_module['__start_module']) {
-          Module.printErr('call side module __start_module');
+          //Module.printErr('call side module __start_module');
           lib_module['__start_module']();
         }
 #else
