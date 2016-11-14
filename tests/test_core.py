@@ -2295,7 +2295,7 @@ def process(filename):
       class Foo {
       public:
         Foo() {
-          printf("Constructing lib object.\\n");
+          puts("Constructing lib object.");
         }
       };
 
@@ -2314,7 +2314,7 @@ def process(filename):
       class Bar {
       public:
         Bar() {
-          printf("Constructing main object.\\n");
+          puts("Constructing main object.");
         }
       };
 
