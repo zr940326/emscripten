@@ -1476,16 +1476,15 @@ int main() {
 
   @no_wasm_backend('long doubles are f64s in wasm backend')
   def test_pystruct(self):
-      def test():
-        self.do_run_in_out_file_test('tests', 'test_pystruct')
+    def test():
+      self.do_run_in_out_file_test('tests', 'test_pystruct')
 
-      test()
+    test()
 
-      print 'relocatable' # this tests recursive global structs => nontrivial postSets for relocation
-      assert Settings.RELOCATABLE == Settings.EMULATED_FUNCTION_POINTERS == 0
-      Settings.RELOCATABLE = Settings.EMULATED_FUNCTION_POINTERS = 1
-      test()
-      Settings.RELOCATABLE = Settings.EMULATED_FUNCTION_POINTERS = 0
+    print 'relocatable' # this tests recursive global structs => nontrivial postSets for relocation
+    assert Settings.RELOCATABLE == Settings.EMULATED_FUNCTION_POINTERS == 0
+    Settings.RELOCATABLE = Settings.EMULATED_FUNCTION_POINTERS = 1
+    test()
 
   def test_ptrtoint(self):
       runner = self
