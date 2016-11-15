@@ -281,6 +281,14 @@ var Runtime = {
     }
     throw 'Finished up all reserved function pointers. Use a higher value for RESERVED_FUNCTION_POINTERS.';
 #else
+#if BINARYEN
+    // we can simply appent to the wasm table
+    var table = Module['wasmTable'];
+    var ret = table.length;
+    table.grow(1);
+    table[ret] = func;
+    return ret;
+#else
     Runtime.alignFunctionTables(); // XXX we should rely on this being an invariant
     var tables = Runtime.getFunctionTables();
     var ret = -1;
@@ -291,6 +299,7 @@ var Runtime = {
       table.push(func);
     }
     return ret;
+#endif
 #endif
   },
 
