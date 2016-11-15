@@ -769,6 +769,9 @@ function jsCall_%s_%s(%s) {
         table_access = 'FUNCTION_TABLE_' + sig
         if settings['SIDE_MODULE']:
           table_access = 'parentModule["' + table_access + '"]' # side module tables were merged into the parent, we need to access the global one
+        if settings['BINARYEN']:
+          # wasm uses a Table, which means we have function pointer emulation capabilities all the time, at no cost. just call the table
+          table_access = "Module['wasmTable']"
         prelude = '''
   if (x < 0 || x >= %s.length) { Module.printErr("Function table mask error (out of range)"); %s ; abort(x) }''' % (table_access, get_function_pointer_error(sig))
         asm_setup += '''
