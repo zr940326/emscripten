@@ -1611,57 +1611,7 @@ LibraryManager.library = {
         var lib_data = FS.readFile(filename, { encoding: 'binary' });
         if (!(lib_data instanceof Uint8Array)) lib_data = new Uint8Array(lib_data);
         //Module.printErr('libfile ' + filename + ' size: ' + lib_data.length);
-        var int32View = new Uint32Array(new Uint8Array(lib_data.subarray(0, 24)).buffer);
-        assert(int32View[0] == 0x6f737700); // \0wso
-        var memorySize = int32View[1];
-        var tableSize = int32View[3];
-        assert(int32View[5] == 0x6d736100); // \0asm
-        //Module.printErr('loading module has memorySize ' + memorySize + ', tableSize ' + tableSize);
-        var wasm = lib_data.subarray(20);
-        //Module.printErr('wasm binary size: ' + wasm.length);
-        var env = Module['asmLibraryArg'];
-        // TODO: use only memoryBase and tableBase, need to update asm.js backend
-        var table = Module['wasmTable'];
-        var oldTableSize = table.length;
-        env['memoryBase'] = env['gb'] = Runtime.alignMemory(getMemory(memorySize));
-        env['tableBase'] = env['fb'] = oldTableSize;
-        //Module.printErr('using memoryBase ' + env['memoryBase'] + ', tableBase ' + env['tableBase']);
-        //Module.printErr('growing table from size ' + oldTableSize + ' by ' + tableSize);
-        table.grow(tableSize);
-        //Module.printErr('table is now of size ' + table.length);
-        // copy currently exported symbols so the new module can import them
-        for (var x in Module) {
-          if (!(x in env)) {
-            env[x] = Module[x];
-          }
-        }
-        var info = {
-          global: Module['asmGlobalArg'],
-          env: env
-        };
-#if ASSERTIONS
-        var oldTable = [];
-        for (var i = 0; i < oldTableSize; i++) {
-          oldTable.push(table[i]);
-        }
-#endif
-        wasm = new WebAssembly.Instance(new WebAssembly.Module(wasm), info);
-#if ASSERTIONS
-        // the old part of the table should be unchanged
-        for (var i = 0; i < oldTableSize; i++) {
-          assert(table[i] === oldTable[i], 'old table entries must remain the same');
-        }
-        // verify that the new table region was filled in
-        for (var i = 0; i < tableSize; i++) {
-          assert(table[oldTableSize + i] !== undefined, 'table entry was not filled in');
-        }
-#endif
-        lib_module = wasm.exports;
-        // initialize the module
-        if (lib_module['__start_module']) {
-          //Module.printErr('call side module __start_module');
-          lib_module['__start_module']();
-        }
+        lib_module = Runtime.loadWebAssemblyModule(lib_data);
 #else
         // the shared library is a JS file, which we eval
         var lib_data = FS.readFile(filename, { encoding: 'utf8' });
