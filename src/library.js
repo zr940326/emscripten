@@ -1621,12 +1621,14 @@ LibraryManager.library = {
         //Module.printErr('wasm binary size: ' + wasm.length);
         var env = Module['asmLibraryArg'];
         // TODO: use only memoryBase and tableBase, need to update asm.js backend
+        var table = Module['wasmTable'];
+        var oldTableSize = table.length;
         env['memoryBase'] = env['gb'] = Runtime.alignMemory(getMemory(memorySize));
-        env['tableBase'] = env['tb'] = env['table'].length;
+        env['tableBase'] = env['fb'] = oldTableSize;
         //Module.printErr('using memoryBase ' + env['memoryBase'] + ', tableBase ' + env['tableBase']);
-        //Module.printErr('growing table from size ' + env['table'].length + ' by ' + tableSize);
-        env['table'].grow(tableSize);
-        //Module.printErr('table is now of size ' + env['table'].length);
+        //Module.printErr('growing table from size ' + oldTableSize + ' by ' + tableSize);
+        table.grow(tableSize);
+        //Module.printErr('table is now of size ' + table.length);
         // copy currently exported symbols so the new module can import them
         for (var x in Module) {
           if (!(x in env)) {
@@ -1637,7 +1639,23 @@ LibraryManager.library = {
           global: Module['asmGlobalArg'],
           env: env
         };
+#if ASSERTIONS
+        var oldTable = [];
+        for (var i = 0; i < oldTableSize; i++) {
+          oldTable.push(table[i]);
+        }
+#endif
         wasm = new WebAssembly.Instance(new WebAssembly.Module(wasm), info);
+#if ASSERTIONS
+        // the old part of the table should be unchanged
+        for (var i = 0; i < oldTableSize; i++) {
+          assert(table[i] === oldTable[i], 'old table entries must remain the same');
+        }
+        // verify that the new table region was filled in
+        for (var i = 0; i < tableSize; i++) {
+          assert(table[oldTableSize + i] !== undefined, 'table entry was not filled in');
+        }
+#endif
         lib_module = wasm.exports;
         // initialize the module
         if (lib_module['__start_module']) {
@@ -1746,6 +1764,7 @@ LibraryManager.library = {
         var result = lib.module[symbol];
         if (typeof result == 'function') {
           result = Runtime.addFunction(result);
+          //Module.printErr('adding function dlsym result for ' + symbol + ' => ' + result);
           lib.cached_functions = result;
         }
         return result;
