@@ -286,7 +286,7 @@ var Runtime = {
     var table = Module['wasmTable'];
     var ret = table.length;
     table.grow(1);
-    table[ret] = func;
+    table.set(ret, func);
     return ret;
 #else
     Runtime.alignFunctionTables(); // XXX we should rely on this being an invariant
@@ -366,7 +366,9 @@ var Runtime = {
     env['tableBase'] = env['fb'] = oldTableSize;
     //Module.printErr('using memoryBase ' + env['memoryBase'] + ', tableBase ' + env['tableBase']);
     //Module.printErr('growing table from size ' + oldTableSize + ' by ' + tableSize);
+    var originalTable = table;
     table.grow(tableSize);
+    assert(table === originalTable);
     //Module.printErr('table is now of size ' + table.length);
     // Each module has its own stack
     var STACKTOP = getMemory(TOTAL_STACK); // TODO: add to cleanups
@@ -388,18 +390,24 @@ var Runtime = {
 #if ASSERTIONS
     var oldTable = [];
     for (var i = 0; i < oldTableSize; i++) {
-      oldTable.push(table[i]);
+      oldTable.push(table.get(i));
     }
 #endif
     wasm = new WebAssembly.Instance(new WebAssembly.Module(wasm), info);
 #if ASSERTIONS
+    // the table should be unchanged
+    assert(table === originalTable);
+    assert(table === Module['wasmTable']);
+    if (wasm.exports['table']) {
+      assert(table === wasm.exports['table']);
+    }
     // the old part of the table should be unchanged
     for (var i = 0; i < oldTableSize; i++) {
-      assert(table[i] === oldTable[i], 'old table entries must remain the same');
+      assert(table.get(i) === oldTable[i], 'old table entries must remain the same');
     }
     // verify that the new table region was filled in
     for (var i = 0; i < tableSize; i++) {
-      assert(table[oldTableSize + i] !== undefined, 'table entry was not filled in');
+      assert(table.get(oldTableSize + i) !== undefined, 'table entry was not filled in');
     }
 #endif
     lib_module = wasm.exports;
