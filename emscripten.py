@@ -694,7 +694,9 @@ function _emscripten_asm_const_%s(%s) {
       if not settings['SIDE_MODULE']:
         asm_setup += 'var gb = Runtime.GLOBAL_BASE, fb = 0;\n'
 
-    asm_runtime_funcs = ['stackAlloc', 'stackSave', 'stackRestore', 'establishStackSpace', 'setThrew']
+    asm_runtime_funcs = []
+    if not settings['WASM'] and settings['SIDE_MODULE']:
+      asm_runtime_funcs += ['stackAlloc', 'stackSave', 'stackRestore', 'establishStackSpace', 'setThrew']
     if not settings['RELOCATABLE']:
       asm_runtime_funcs += ['setTempRet0', 'getTempRet0']
     else:
