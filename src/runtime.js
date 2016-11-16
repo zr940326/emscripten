@@ -362,12 +362,19 @@ var Runtime = {
     // TODO: use only memoryBase and tableBase, need to update asm.js backend
     var table = Module['wasmTable'];
     var oldTableSize = table.length;
-    env['memoryBase'] = env['gb'] = Runtime.alignMemory(getMemory(memorySize));
+    env['memoryBase'] = env['gb'] = Runtime.alignMemory(getMemory(memorySize)); // TODO: add to cleanups
     env['tableBase'] = env['fb'] = oldTableSize;
     //Module.printErr('using memoryBase ' + env['memoryBase'] + ', tableBase ' + env['tableBase']);
     //Module.printErr('growing table from size ' + oldTableSize + ' by ' + tableSize);
     table.grow(tableSize);
     //Module.printErr('table is now of size ' + table.length);
+    // Each module has its own stack
+    var STACKTOP = getMemory(TOTAL_STACK); // TODO: add to cleanups
+    assert(STACKTOP % 8 == 0);
+    var STACK_MAX = STACKTOP + TOTAL_STACK;
+    env['STACKTOP'] = STACKTOP;
+    env['STACK_MAX'] = STACK_MAX;
+    // TODO: add to cleanups
     // copy currently exported symbols so the new module can import them
     for (var x in Module) {
       if (!(x in env)) {
