@@ -460,6 +460,7 @@ function _emscripten_asm_const_%s(%s) {
     in_table = set()
 
     def make_table(sig, raw):
+      if '[]' in raw: return ('', '') # empty table
       params = make_params(sig)
       coerced_params = make_coerced_params(sig)
       coercions = make_coercions(sig)
@@ -682,7 +683,7 @@ function _emscripten_asm_const_%s(%s) {
         asm_setup += '\nfunction nullFunc_' + sig + '(x) { ' + get_function_pointer_error(sig) + 'abort(x) }\n'
 
     basic_vars = ['DYNAMICTOP_PTR', 'tempDoublePtr', 'ABORT']
-    if not (settings['WASM'] and settings['SIDE_MODULE']):
+    if not (settings['BINARYEN'] and settings['SIDE_MODULE']):
       basic_vars += ['STACKTOP', 'STACK_MAX']
     basic_float_vars = []
 
@@ -698,7 +699,7 @@ function _emscripten_asm_const_%s(%s) {
         asm_setup += 'var gb = Runtime.GLOBAL_BASE, fb = 0;\n'
 
     asm_runtime_funcs = []
-    if not settings['WASM'] and settings['SIDE_MODULE']:
+    if not (settings['BINARYEN'] and settings['SIDE_MODULE']):
       asm_runtime_funcs += ['stackAlloc', 'stackSave', 'stackRestore', 'establishStackSpace', 'setThrew']
     if not settings['RELOCATABLE']:
       asm_runtime_funcs += ['setTempRet0', 'getTempRet0']
@@ -891,7 +892,7 @@ function ftCall_%s(%s) {%s
       asm_global_funcs += ''.join(['  var Atomics_' + ty + '=global' + access_quote('Atomics') + access_quote(ty) + ';\n' for ty in ['load', 'store', 'exchange', 'compareExchange', 'add', 'sub', 'and', 'or', 'xor']])
     asm_global_vars = ''.join(['  var ' + g + '=env' + access_quote(g) + '|0;\n' for g in basic_vars + global_vars])
 
-    if settings['WASM'] and settings['SIDE_MODULE']:
+    if settings['BINARYEN'] and settings['SIDE_MODULE']:
       asm_global_vars += '\n  var STACKTOP = 0, STACK_MAX = 0;\n' # wasm side modules internally define their stack, these are set at module startup time
 
     # sent data
@@ -915,7 +916,7 @@ return real_''' + s + '''.apply(null, arguments);
       receiving += 'Module["asm"] = asm;\n' + ';\n'.join(['var ' + s + ' = Module["' + s + '"] = function() { return Module["asm"]["' + s + '"].apply(null, arguments) }' for s in exported_implemented_functions + function_tables])
     receiving += ';\n'
 
-    if settings['EXPORT_FUNCTION_TABLES']:
+    if settings['EXPORT_FUNCTION_TABLES'] and not settings['BINARYEN']:
       for table in last_forwarded_json['Functions']['tables'].values():
         tableName = table.split()[1]
         table = table.replace('var ' + tableName, 'var ' + tableName + ' = Module["' + tableName + '"]')
@@ -927,10 +928,11 @@ return real_''' + s + '''.apply(null, arguments);
     if settings.get('EMULATED_FUNCTION_POINTERS'):
       asm_setup += '\n' + '\n'.join(function_tables_impls) + '\n'
       receiving += '\n' + function_tables_defs.replace('// EMSCRIPTEN_END_FUNCS\n', '') + '\n' + ''.join(['Module["dynCall_%s"] = dynCall_%s\n' % (sig, sig) for sig in last_forwarded_json['Functions']['tables']])
-      for sig in last_forwarded_json['Functions']['tables'].keys():
-        name = 'FUNCTION_TABLE_' + sig
-        fullname = name if not settings['SIDE_MODULE'] else ('SIDE_' + name)
-        receiving += 'Module["' + name + '"] = ' + fullname + ';\n'
+      if not settings['BINARYEN']:
+        for sig in last_forwarded_json['Functions']['tables'].keys():
+          name = 'FUNCTION_TABLE_' + sig
+          fullname = name if not settings['SIDE_MODULE'] else ('SIDE_' + name)
+          receiving += 'Module["' + name + '"] = ' + fullname + ';\n'
 
       final_function_tables = final_function_tables.replace("asm['", '').replace("']", '').replace('var SIDE_FUNCTION_TABLE_', 'var FUNCTION_TABLE_').replace('var dynCall_', '//')
 
