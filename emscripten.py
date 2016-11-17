@@ -820,6 +820,10 @@ function ftCall_%s(%s) {%s
     exports = []
     for export in all_exported:
       exports.append(quote(export) + ": " + export)
+    if settings['BINARYEN'] and settings['SIDE_MODULE']:
+      # named globals in side wasm modules are exported globals from asm/wasm
+      for k, v in metadata['namedGlobals'].iteritems():
+        exports.append(quote('_' + str(k)) + ': ' + str(v))
     exports = '{ ' + ', '.join(exports) + ' }'
     # calculate globals
     try:

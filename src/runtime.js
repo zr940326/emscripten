@@ -403,13 +403,20 @@ var Runtime = {
       assert(table.get(oldTableSize + i) !== undefined, 'table entry was not filled in');
     }
 #endif
-    lib_module = wasm.exports;
-    // initialize the module
-    if (lib_module['__start_module']) {
-      //Module.printErr('call side module __start_module');
-      lib_module['__start_module']();
+    var exports = {};
+    for (var e in wasm.exports) {
+      var value = wasm.exports[e];
+      if (typeof value === 'number') {
+        // relocate it - modules export the absolute value, they can't relocate before they export
+        value = value + env['memoryBase'];
+      }
+      exports[e] = value;
     }
-    return lib_module;
+    // initialize the module
+    if (exports['__start_module']) {
+      exports['__start_module']();
+    }
+    return exports;
   },
 #endif
 #endif
