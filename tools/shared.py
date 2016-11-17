@@ -2204,21 +2204,19 @@ class JS:
 
 class WebAssembly:
   @staticmethod
-  def make_shared_library(js_file, wasm_file, mem_file):
+  def make_shared_library(js_file, wasm_file):
     # a wasm shared library is a special binary file, containing
     # \0wso
     # 8 bytes: size of memory segment (little-endian unsigned integer)
     # 8 bytes: size of table segment (little-endian unsigned integer)
     # then the wasm module itself
     # find the sizes, using the mem file and the data in the js
-    mem_size = 0
-    if os.path.exists(mem_file):
-      mem_size = os.stat(mem_file).st_size
     js = open(js_file).read()
+    m = re.search("var STATIC_BUMP = (\d+);", js)
+    mem_size = int(m.group(1))
     m = re.search("Module\['wasmTableSize'\] = (\d+);", js)
-    table_size = 0
-    if m:
-      table_size = int(m.group(1))
+    table_size = int(m.group(1))
+    logging.debug('creating .wso with mem size %d, table size %d' % (mem_size, table_size))
     wso = js_file + '.wso'
     # write the binary
     f = open(wso, 'wb')

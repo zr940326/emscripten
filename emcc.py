@@ -2035,6 +2035,10 @@ There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR P
           logging.debug('asm2wasm (asm.js => WebAssembly): ' + ' '.join(cmd))
           TimeLogger.update()
           subprocess.check_call(cmd, stdout=open(wasm_text_target, 'w'))
+          if import_mem_init:
+            # remove and forget about the mem init file in later processing; it does not need to be prefetched in the html, etc.
+            os.unlink(memfile)
+            memory_init_file = False
           log_time('asm2wasm')
         if shared.Settings.BINARYEN_PASSES:
           shutil.move(wasm_text_target, wasm_text_target + '.pre')
@@ -2063,13 +2067,9 @@ There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR P
         # after generating the wasm, do some final operations
         if not shared.Settings.WASM_BACKEND:
           if shared.Settings.SIDE_MODULE:
-            wso = shared.WebAssembly.make_shared_library(js_target, wasm_binary_target, memfile)
+            wso = shared.WebAssembly.make_shared_library(js_target, wasm_binary_target)
             # replace the .js output with the shared library. TODO: emit a file with suffix .wso
             shutil.move(wso, js_target)
-          if import_mem_init:
-            # remove and forget about the mem init file in later processing; it does not need to be prefetched in the html, etc.
-            os.unlink(memfile)
-            memory_init_file = False
 
       # If we were asked to also generate HTML, do that
       if final_suffix == 'html':

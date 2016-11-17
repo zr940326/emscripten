@@ -370,13 +370,6 @@ var Runtime = {
     table.grow(tableSize);
     assert(table === originalTable);
     //Module.printErr('table is now of size ' + table.length);
-    // Each module has its own stack
-    var STACKTOP = getMemory(TOTAL_STACK); // TODO: add to cleanups
-    assert(STACKTOP % 8 == 0);
-    var STACK_MAX = STACKTOP + TOTAL_STACK;
-    env['STACKTOP'] = STACKTOP;
-    env['STACK_MAX'] = STACK_MAX;
-    // TODO: add to cleanups
     // copy currently exported symbols so the new module can import them
     for (var x in Module) {
       if (!(x in env)) {
