@@ -817,7 +817,9 @@ function ftCall_%s(%s) {%s
       exported_implemented_functions.append('_emscripten_replace_memory')
     all_exported = exported_implemented_functions + asm_runtime_funcs + function_tables
     exported_implemented_functions = list(set(exported_implemented_functions))
-    if settings['EMULATED_FUNCTION_POINTERS']:
+    # asm.js emulated function pointers depend on everything in the table being exported,
+    # but in wasm we don't need that.
+    if settings['EMULATED_FUNCTION_POINTERS'] and not settings['BINARYEN']:
       all_exported = list(set(all_exported).union(in_table))
     exports = []
     for export in all_exported:
