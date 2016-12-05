@@ -1214,6 +1214,14 @@ There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR P
         if shared.Building.is_wasm_only() and shared.Settings.EVAL_CTORS:
           logging.debug('disabling EVAL_CTORS, as in wasm-only mode it hurts more than it helps. TODO: a wasm version of it')
           shared.Settings.EVAL_CTORS = 0
+        # emulated function pointers, i.e. using a flexible table instead of multiple fixed
+        # asm.js ones, is better in wasm, since the single flexible table is a wasm Table
+        # which is fast, accessible from the outside, avoids asm.js masks for function
+        # pointer calls, etc. We therefore prefer it, unless the code also needs to run as
+        # asm.js or the user explicitly asked not to do this.
+        if shared.Building.is_wasm_only() and 'EMULATED_FUNCTION_POINTERS=0' not in settings_changes:
+          logging.debug('enabling emulated function pointers to fully benefit from wasm Table')
+          shared.Settings.EMULATED_FUNCTION_POINTERS = 1
 
       if shared.Settings.EVAL_CTORS:
         # this option is not a js optimizer pass, but does run the js optimizer internally, so

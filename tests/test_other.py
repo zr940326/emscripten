@@ -6938,6 +6938,19 @@ int main() {
     finally:
       del os.environ['EMCC_DEBUG']
 
+  def test_binaryen_emulated_function_pointers(self):
+    for args, expect in [
+      ([], True),
+      (['-s', 'EMULATED_FUNCTION_POINTERS=0'], False), # user asked not to emulate
+      (['-s', 'BINARYEN_METHOD="asmjs"'], False), # disabled since asm.js
+    ]:
+      for opts in [[], ['-O2']]:
+        args += opts
+        print args, expect
+        subprocess.check_call([PYTHON, EMCC, path_from_root('tests', 'hello_libcxx.cpp'), '-s', 'WASM=1'] + args)
+        js = open('a.out.js').read()
+        assert expect == ('function ftCall_' in js), 'ftCalls indicate emulated function calls'
+
   def test_binaryen_names(self):
     sizes = {}
     for args, expect_names in [
