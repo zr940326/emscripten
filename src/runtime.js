@@ -220,6 +220,7 @@ var Runtime = {
   },
 
 #if EMULATED_FUNCTION_POINTERS
+#if BINARYEN == 0
   getFunctionTables: function(module) {
     if (!module) module = Module;
     var tables = {};
@@ -267,9 +268,10 @@ var Runtime = {
     });
     assert(maxx === Runtime.alignFunctionTables()); // align the ones we didn't touch
   },
-#endif
-
+#endif // BINARYEN == 0
+#else // EMULATED_FUNCTION_POINTERS
   functionPointers: new Array(RESERVED_FUNCTION_POINTERS),
+#endif
 
   addFunction: function(func) {
 #if EMULATED_FUNCTION_POINTERS == 0
