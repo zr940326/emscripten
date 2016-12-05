@@ -529,6 +529,38 @@ class benchmark(RunnerCore):
     '''
     self.do_benchmark('corrections64', src, 'final:')
 
+  def zzz_test_indirect_call(self):
+    src = r'''
+      #include <stdio.h>
+      typedef int (*intfunc)();
+      int a() { return 1; }
+      int b() { return 2; }
+      int main(int argc, char **argv) {
+        int N;
+        int arg = argc > 1 ? argv[1][0] - '0' : 3;
+        switch(arg) {
+          case 0: return 0; break;
+          case 1: N = 550; break;
+          case 2: N = 3500; break;
+          case 3: N = 7000; break;
+          case 4: N = 5*7000; break;
+          case 5: N = 10*7000; break;
+          default: printf("error: %d\\n", arg); return -1;
+        }
+        int sum = 0;
+        volatile intfunc x = a;
+        volatile intfunc y = b;
+        for (int j = 0; j < 10000; j++) {
+          for (int i = 0; i < N; i++) {
+            sum += ((sum + i) & 1) ? x() : y();
+          }
+        }
+        printf("final: %d\n", sum);
+        return 0;
+      }
+    '''
+    self.do_benchmark('indirect_call', src, 'final:')
+
   def fasta(self, name, double_rep, emcc_args=[]):
     src = open(path_from_root('tests', 'fasta.cpp'), 'r').read().replace('double', double_rep)
     src = src.replace('   const size_t n = ( argc > 1 ) ? atoi( argv[1] ) : 512;', '''
