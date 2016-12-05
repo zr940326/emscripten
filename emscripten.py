@@ -786,13 +786,17 @@ function jsCall_%s_%s(%s) {
           table_read = table_access + '.get(x)'
         else:
           table_read = table_access + '[x]'
-        prelude = '''
+        if settings['ASSERTIONS']:
+          prelude = '''
   if (x < 0 || x >= %s.length) { Module.printErr("Function table mask error (out of range)"); %s ; abort(x) }''' % (table_access, get_function_pointer_error(sig))
+        else:
+          prelude = ''
         asm_setup += '''
 function ftCall_%s(%s) {%s
   return %s(%s);
 }
 ''' % (sig, ', '.join(full_args), prelude, table_read, ', '.join(args))
+
         if not settings['BINARYEN']: # in wasm, emulated function pointers are just simple table calls
           basic_funcs.append('ftCall_%s' % sig)
 
