@@ -940,7 +940,9 @@ return real_''' + s + '''.apply(null, arguments);
     if DEBUG: logging.debug('asm text sizes' + str([map(len, funcs_js), len(asm_setup), len(asm_global_vars), len(asm_global_funcs), len(pre_tables), len('\n'.join(function_tables_impls)), len(function_tables_defs) + (function_tables_defs.count('\n') * len('  ')), len(exports), len(the_global), len(sending), len(receiving)]))
 
     final_function_tables = '\n'.join(function_tables_impls) + '\n' + function_tables_defs
-    if settings.get('EMULATED_FUNCTION_POINTERS'):
+    if settings['EMULATED_FUNCTION_POINTERS']:
+      if settings['BINARYEN']: # in wasm the tables are implemented inside the wasm module
+        function_tables_defs = ''
       asm_setup += '\n' + '\n'.join(function_tables_impls) + '\n'
       receiving += '\n' + function_tables_defs.replace('// EMSCRIPTEN_END_FUNCS\n', '') + '\n' + ''.join(['Module["dynCall_%s"] = dynCall_%s\n' % (sig, sig) for sig in last_forwarded_json['Functions']['tables']])
       if not settings['BINARYEN']:
