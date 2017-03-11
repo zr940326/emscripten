@@ -10,7 +10,7 @@
 
 const int SIZE = 400;
 const double BETA = 0.5; // interesting values: 1, 0.1, 0.01
-const int ITERS_PER_FRAME = SIZE * 10;
+const int ITERS_PER_FRAME = (SIZE * SIZE) / 30;
 
 struct State {
   int size;
