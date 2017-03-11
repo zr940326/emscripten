@@ -8,8 +8,8 @@
 
 #include <vector>
 
-const int SIZE = 400;
-const double BETA = 0.5; // interesting values: 1, 0.1, 0.01
+const int SIZE = 300;
+double BETA = 0.5; // interesting values: 1, 0.1, 0.01
 const int ITERS_PER_FRAME = (SIZE * SIZE) / 30;
 
 struct State {
@@ -89,10 +89,30 @@ void loop() {
   }
 }
 
+extern "C" EMSCRIPTEN_KEEPALIVE void setBeta(double beta) {
+  BETA = beta;
+}
+
 int main(int argc, char **argv) {
   state.randomize();
   SDL_Init(SDL_INIT_VIDEO);
   screen = SDL_SetVideoMode(SIZE, SIZE, 32, SDL_SWSURFACE);
   emscripten_set_main_loop(loop, 0, 0);
+  // create a slider
+  EM_ASM({
+    function scale(value) {
+      return Math.log(1 + ((Math.exp(1) - 1) * 0.25 * value));
+    }
+    Module._setBeta(scale(0.5));
+
+    var slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = 1;
+    slider.max = 100;
+    slider.onchange = function(event) {
+      Module._setBeta(scale(event.target.value / 100));
+    };
+    document.body.appendChild(slider);
+  });
 }
 
