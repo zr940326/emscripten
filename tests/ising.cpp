@@ -75,6 +75,11 @@ SDL_Surface *screen;
 State state;
 
 void loop() {
+  // update
+  for (int i = 0; i < ITERS_PER_FRAME; i++) {
+    state.doMetropolisHastings();
+  }
+  // draw
   SDL_LockSurface(screen);
   int32_t* data = (int32_t*)screen->pixels;
   for (int i = 0; i < SIZE; i++) {
@@ -84,8 +89,10 @@ void loop() {
     }
   }
   SDL_UnlockSurface(screen);
-  for (int i = 0; i < ITERS_PER_FRAME; i++) {
-    state.doMetropolisHastings();
+  // logging every few frames
+  static int counter = 0;
+  if (counter++ % 60 == 0) {
+    printf("Energy: %d\n", state.calculateEnergy());
   }
 }
 
