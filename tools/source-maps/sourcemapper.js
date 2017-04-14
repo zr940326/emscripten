@@ -105,7 +105,8 @@ function extractComments(source, commentHandler) {
 function getMappings(source) {
   // generatedLineNumber -> { originalLineNumber, originalFileName }
   var mappings = {};
-  extractComments(source, function(content, generatedLineNumber) {
+    extractComments(source, function(content, generatedLineNumber) {
+	console.log(content);
     var matches = /@line (\d+)(?: "([^"]*)")?/.exec(content);
     if (matches === null) return;
     var originalFileName = matches[2];
@@ -115,6 +116,21 @@ function getMappings(source) {
     }
   });
   return mappings;
+}
+
+function getMappingsForBinary(rawMappings) {
+    rawMappings = toUnixLineEnding(rawMappings);
+    console.log(rawMappings.length);
+    let start = 0;
+    let end = rawMappings.indexOf('\n') + 1;
+    while (end !== -1 && and ) {
+	console.log(start, end);
+	const slice = rawMappings.slice(start, end);
+	console.log(slice);
+	start = end;
+	end = rawMappings.indexOf('\n', start) + 1;
+    }
+	
 }
 
 function generateMap(mappings, sourceRoot, mapFileBaseName, generatedLineOffset) {
@@ -181,9 +197,15 @@ if (require.main === module) {
 
     var generatedSource = toUnixLineEnding(fs.readFileSync(fileName, 'utf-8'));
     var source = generatedSource;
+      //console.log(source);
+      var mappings = getMappingsForBinary(generatedSource);
+      process.exit(0);
     var mappings = getMappings(generatedSource);
+
     for (var i = 1, l = opts._.length; i < l; i ++) {
+	console.log("optimizedSource");
       var optimizedSource = toUnixLineEnding(fs.readFileSync(opts._[i], 'utf-8'))
+	//console.log(optimizedSource);
       var optimizedMappings = getMappings(optimizedSource);
       var newMappings = {};
       // uglify processes the code between EMSCRIPTEN_START_FUNCS and
