@@ -119,21 +119,34 @@ function getMappings(source) {
 }
 
 function getMappingsForBinary(rawMappings) {
-    rawMappings = toUnixLineEnding(rawMappings);
-    console.log(rawMappings.length);
-    let start = 0;
-    let end = rawMappings.indexOf('\n') + 1;
-    while (end !== -1 && and ) {
-	console.log(start, end);
-	const slice = rawMappings.slice(start, end);
-	console.log(slice);
-	start = end;
-	end = rawMappings.indexOf('\n', start) + 1;
+  // generatedBinaryOffset -> { originalLineNumber, originalFileName }
+  rawMappings = toUnixLineEnding(rawMappings);
+  console.log(rawMappings.length);
+  let start = 0;
+  let end = -1;
+  let mappings = {}
+  while (end < rawMappings.length) {
+    end = rawMappings.indexOf('\n', start) + 1 || rawMappings.length;
+    console.log(start, end);
+    const line = rawMappings.slice(start, end);
+    console.log(line);
+    const matchResult = line.match('([0-9]+):(.+):([0-9]+)')
+    start = end;
+
+    if (matchResult === null) continue;
+    const offset = parseInt(matchResult[1]);
+    const file = matchResult[2];
+    const lineNo = parseInt(matchResult[3]);
+    mappings[offset] = {
+      originalLineNumber: lineNo,
+      originalFileName: file
     }
-	
+  }
+  console.log(mappings)
+  return mappings
 }
 
-function generateMap(mappings, sourceRoot, mapFileBaseName, generatedLineOffset) {
+function generateMap(mappings, sourceRoot, mapFileBaseName, generatedLineOffset, isBinary) {
   var SourceMapGenerator = require('source-map').SourceMapGenerator;
 
   var generator = new SourceMapGenerator({ file: mapFileBaseName });
@@ -143,8 +156,16 @@ function generateMap(mappings, sourceRoot, mapFileBaseName, generatedLineOffset)
     var generatedLineNumber = parseInt(generatedLineNumber, 10);
     var mapping = mappings[generatedLineNumber];
     var originalFileName = mapping.originalFileName;
+    var generated;
+    if (isBinary) {
+      // Maps of a wasm binary use the offset as the column number rather than
+      // line, for a more efficient encoding.
+      generated = { column: generatedLineNumber + generatedLineOffset, line: 1 };
+    } else {
+      generated = { line: generatedLineNumber + generatedLineOffset, column: 0 };
+    }
     generator.addMapping({
-      generated: { line: generatedLineNumber + generatedLineOffset, column: 0 },
+      generated: generated,
       original: { line: mapping.originalLineNumber, column: 0 },
       source: originalFileName
     });
@@ -175,7 +196,8 @@ function appendMappingURL(fileName, source, mapFileName) {
 function parseArgs(args) {
   var rv = { _: [] }; // unflagged args go into `_`; similar to the optimist library
   for (var i = 0; i < args.length; i++) {
-    if (/^--/.test(args[i])) rv[args[i].slice(2)] = args[++i];
+    if (args[i] == '--binary') rv.binary = true;
+    else if (/^--/.test(args[i])) rv[args[i].slice(2)] = args[++i];
     else rv._.push(args[i]);
   }
   return rv;
@@ -194,13 +216,18 @@ if (require.main === module) {
     var sourceRoot = opts.sourceRoot ? toUnixPath(opts.sourceRoot) : ".";
     var mapFileBaseName = toUnixPath(opts.mapFileBaseName ? opts.mapFileBaseName : fileName);
     var generatedLineOffset = opts.offset ? parseInt(opts.offset, 10) : 0;
+    var isBinary = !!opts.binary;
 
     var generatedSource = toUnixLineEnding(fs.readFileSync(fileName, 'utf-8'));
     var source = generatedSource;
-      //console.log(source);
-      var mappings = getMappingsForBinary(generatedSource);
-      process.exit(0);
-    var mappings = getMappings(generatedSource);
+
+    var mappings;
+    if (isBinary) {
+      mappings = getMappingsForBinary(generatedSource);
+    } else {
+      mappings = getMappings(generatedSource);
+    }
+    console.log(mappings);
 
     for (var i = 1, l = opts._.length; i < l; i ++) {
 	console.log("optimizedSource");
@@ -223,7 +250,7 @@ if (require.main === module) {
       source = optimizedSource;
     }
 
-    generateMap(mappings, sourceRoot, mapFileBaseName, generatedLineOffset);
+    generateMap(mappings, sourceRoot, mapFileBaseName, generatedLineOffset, isBinary);
     appendMappingURL(opts._[opts._.length - 1], generatedSource,
                      opts.mapFileBaseName + '.map');
   }

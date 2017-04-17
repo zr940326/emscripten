@@ -1385,7 +1385,7 @@ def main():
       processname_killed_atexit = 'Safari'
     elif 'chrome' in browser_exe.lower():
       processname_killed_atexit = 'chrome'
-      browser_args = ['--incognito', '--enable-nacl', '--enable-pnacl', '--disable-restore-session-state', '--enable-webgl', '--no-default-browser-check', '--no-first-run', '--allow-file-access-from-files']
+      browser_args = ['--incognito', '--enable-nacl', '--enable-pnacl', '--disable-restore-session-state', '--enable-webgl', '--no-default-browser-check', '--no-first-run', '--allow-file-access-from-files', '--user-data-dir=']
   #    if options.no_server:
   #      browser_args += ['--disable-web-security']
     elif 'firefox' in browser_exe.lower():
@@ -1411,6 +1411,9 @@ def main():
   if processname_killed_atexit == 'firefox' and options.safe_firefox_profile and not options.no_browser:
     profile_dir = create_emrun_safe_firefox_profile()
     browser += ['-no-remote', '-profile', profile_dir.replace('\\', '/')]
+  if processname_killed_atexit == 'chrome' and options.safe_firefox_profile and not options.no_browser:
+    profile_dir = create_emrun_safe_firefox_profile()
+    browser += ['--user-data-dir=%s' % profile_dir.strip().replace('\\', '/')]
 
   if options.system_info:
     logi('Time of run: ' + time.strftime("%x %X"))
