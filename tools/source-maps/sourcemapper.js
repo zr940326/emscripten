@@ -251,7 +251,9 @@ if (require.main === module) {
     }
 
     generateMap(mappings, sourceRoot, mapFileBaseName, generatedLineOffset, isBinary);
-    appendMappingURL(opts._[opts._.length - 1], generatedSource,
-                     opts.mapFileBaseName + '.map');
+    if (!isBinary) {
+      appendMappingURL(opts._[opts._.length - 1], generatedSource,
+                       opts.mapFileBaseName + '.map');
+    }
   }
 }
