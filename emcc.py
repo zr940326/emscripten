@@ -2106,8 +2106,6 @@ There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR P
           combined.write('\n//^wasm.js\n')
           combined.write(js)
           combined.close()
-        # normally we emit binary, but for debug info, we might emit text first
-        wrote_wasm_text = False
         # finish compiling to WebAssembly, using asm2wasm, if we didn't already emit WebAssembly directly using the wasm backend.
         if not shared.Settings.WASM_BACKEND:
           cmd = [os.path.join(binaryen_bin, 'asm2wasm'), asm_target, '--total-memory=' + str(shared.Settings.TOTAL_MEMORY)]
@@ -2144,36 +2142,35 @@ There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR P
             cmd += ['-g']
           if emit_symbol_map or shared.Settings.CYBERDWARF:
             cmd += ['--symbolmap=' + target + '.symbols']
-          # we prefer to emit a binary, as it is more efficient. however, when we
-          # want full debug info support (not just function names), then we must
-          # emit text (at least until wasm gains support for debug info in binaries)
-          target_binary = debug_level < 3
-          if target_binary:
-            cmd += ['-o', wasm_binary_target]
-          else:
-            cmd += ['-o', wasm_text_target, '-S']
-            wrote_wasm_text = True
+
+          generate_sourcemap = False
+          if debug_level >= 3:
+            cmd += ['--binarymap-file', wasm_binary_target + '.txtmap', '--binarymap-url', wasm_binary_target + '.map']
+            generate_sourcemap = True
+          cmd += ['-o', wasm_binary_target]
           logging.debug('asm2wasm (asm.js => WebAssembly): ' + ' '.join(cmd))
           TimeLogger.update()
           subprocess.check_call(cmd)
 
-          if not target_binary:
-            cmd = [os.path.join(binaryen_bin, 'wasm-as'), wasm_text_target, '-o', wasm_binary_target]
-            if debug_level >= 2 or profiling_funcs:
-              cmd += ['-g']
-            logging.debug('wasm-as (text => binary): ' + ' '.join(cmd))
-            subprocess.check_call(cmd)
+          if generate_sourcemap:
+            jsrun.run_js(shared.path_from_root('tools', 'source-maps', 'sourcemapper.js'),
+                         shared.NODE_JS, [wasm_binary_target + '.txtmap'] +
+                         ['--binary',
+                          '--sourceRoot', os.getcwd(),
+                          '--mapFileBaseName', wasm_binary_target,
+                          '--offset', str(0)])
+
           if import_mem_init:
             # remove and forget about the mem init file in later processing; it does not need to be prefetched in the html, etc.
             os.unlink(memfile)
             memory_init_file = False
           log_time('asm2wasm')
-        if shared.Settings.BINARYEN_PASSES:
+        if shared.Settings.BINARYEN_PASSES and not debug_level >= 3: # can't use wasm-opt to transform stuff if we generated binary map. fixme?
           shutil.move(wasm_binary_target, wasm_binary_target + '.pre')
           cmd = [os.path.join(binaryen_bin, 'wasm-opt'), wasm_binary_target + '.pre', '-o', wasm_binary_target] + map(lambda p: '--' + p, shared.Settings.BINARYEN_PASSES.split(','))
           logging.debug('wasm-opt on BINARYEN_PASSES: ' + ' '.join(cmd))
           subprocess.check_call(cmd)
-        if not wrote_wasm_text and 'interpret-s-expr' in shared.Settings.BINARYEN_METHOD:
+        if 'interpret-s-expr' in shared.Settings.BINARYEN_METHOD:
           cmd = [os.path.join(binaryen_bin, 'wasm-dis'), wasm_binary_target, '-o', wasm_text_target]
           logging.debug('wasm-dis (binary => text): ' + ' '.join(cmd))
           subprocess.check_call(cmd)
