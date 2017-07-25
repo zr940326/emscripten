@@ -1206,6 +1206,11 @@ There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR P
           newargs.append('-mllvm')
           newargs.append('-disable-llvm-optzns')
 
+      if shared.Settings.RUNNING_JS_OPTS and shared.Settings.WASM:
+        if shared.Settings.BINARYEN_TRAP_MODE != 'js'
+          logging.warning('setting BINARYEN_TRAP_MODE to "js", because the asm.js optimizer is being used and it optimizes code under the assumption of JavaScript semantics, where there is no trapping')
+          shared.Settings.BINARYEN_TRAP_MODE = 'js'
+
       if not shared.Settings.LEGALIZE_JS_FFI:
         assert shared.Building.is_wasm_only(), 'LEGALIZE_JS_FFI incompatible with RUNNING_JS_OPTS and non-wasm BINARYEN_METHOD.'
 
