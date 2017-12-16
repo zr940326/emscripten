@@ -20,10 +20,12 @@ import parallel_runner
 if sys.version_info.major == 2:
   from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
   from SimpleHTTPServer import SimpleHTTPRequestHandler
+  from SocketServer import ThreadingMixIn
   from httplib import HTTPConnection
   from urllib import unquote
 else:
   from http.server import HTTPServer, BaseHTTPRequestHandler, SimpleHTTPRequestHandler
+  from socketserver import ThreadingMixIn
   from http.client import HTTPConnection
   from urllib.parse import unquote
 
@@ -754,6 +756,11 @@ def harness_server_func(q, port):
   httpd = HTTPServer(('localhost', port), TestServerHandler)
   httpd.serve_forever() # test runner will kill us
 
+# the simple http server is single-threaded, and can be slow
+class ThreadingSimpleServer(ThreadingMixIn,
+                            HTTPServer):
+  pass
+
 def server_func(dir, q, port):
   class TestServerHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
@@ -778,7 +785,7 @@ def server_func(dir, q, port):
 
   SimpleHTTPRequestHandler.extensions_map['.wasm'] = 'application/wasm'
   os.chdir(dir)
-  httpd = HTTPServer(('localhost', port), TestServerHandler)
+  httpd = ThreadingSimpleServer(('localhost', port), TestServerHandler)
   httpd.serve_forever() # test runner will kill us
 
 class BrowserCore(RunnerCore):
