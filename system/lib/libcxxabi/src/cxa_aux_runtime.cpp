@@ -21,12 +21,20 @@ extern "C"
 
 LIBCXXABI_NORETURN
 void __cxa_bad_cast (void) {
+#if !__has_feature(cxx_noexcept)
     throw std::bad_cast();
+#else
+    abort();
+#endif
 }
 
 LIBCXXABI_NORETURN
 void __cxa_bad_typeid(void) {
+#if !__has_feature(cxx_noexcept)
     throw std::bad_typeid();
+#else
+    abort();
+#endif
 }
 
 }  // extern "C"

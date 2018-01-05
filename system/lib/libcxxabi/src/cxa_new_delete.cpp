@@ -47,7 +47,11 @@ operator new(std::size_t size)
         if (nh)
             nh();
         else
+#if !__has_feature(cxx_noexcept)
             throw std::bad_alloc();
+#else
+            abort();
+#endif
     }
     return p;
 }
@@ -74,13 +78,17 @@ operator new(size_t size, const std::nothrow_t&)
 #endif
 {
     void* p = 0;
+#if !__has_feature(cxx_noexcept)
     try
     {
+#endif
         p = ::operator new(size);
+#if !__has_feature(cxx_noexcept)
     }
     catch (...)
     {
     }
+#endif
     return p;
 }
 
@@ -115,13 +123,17 @@ operator new[](size_t size, const std::nothrow_t&)
 #endif
 {
     void* p = 0;
+#if !__has_feature(cxx_noexcept)
     try
     {
+#endif
         p = ::operator new[](size);
+#if !__has_feature(cxx_noexcept)
     }
     catch (...)
     {
     }
+#endif
     return p;
 }
 

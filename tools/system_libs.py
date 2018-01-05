@@ -87,11 +87,11 @@ def calculate(temp_files, in_temp, stdout_, stderr_, forced=[]):
     shared.Building.link(o_s, in_temp(lib_filename))
     return in_temp(lib_filename)
 
-  def build_libcxx(src_dirname, lib_filename, files, lib_opts, has_noexcept_version=False):
+  def build_libcxx(src_dirname, lib_filename, files, lib_opts):
     o_s = []
     commands = []
     opts = default_opts + lib_opts
-    if has_noexcept_version and shared.Settings.DISABLE_EXCEPTION_CATCHING:
+    if shared.Settings.DISABLE_EXCEPTION_CATCHING:
       opts += ['-fno-exceptions']
     for src in files:
       o = in_temp(src + '.o')
@@ -229,8 +229,7 @@ def calculate(temp_files, in_temp, stdout_, stderr_, forced=[]):
     libcxxabi_include = shared.path_from_root('system', 'lib', 'libcxxabi', 'include')
     return build_libcxx(
       os.path.join('system', 'lib', 'libcxx'), libname, libcxx_files,
-      ['-DLIBCXX_BUILDING_LIBCXXABI=1', '-D_LIBCPP_BUILDING_LIBRARY', '-Oz', '-I' + libcxxabi_include],
-      has_noexcept_version=True)
+      ['-DLIBCXX_BUILDING_LIBCXXABI=1', '-D_LIBCPP_BUILDING_LIBRARY', '-Oz', '-I' + libcxxabi_include])
 
   # libcxxabi - just for dynamic_cast for now
   def create_libcxxabi(libname):
@@ -434,7 +433,7 @@ def calculate(temp_files, in_temp, stdout_, stderr_, forced=[]):
         shared.Settings.EXPORTED_FUNCTIONS.append('_' + dep)
 
   system_libs = [('libcxx',        'a',  create_libcxx,      libcxx_symbols,      ['libcxxabi'], True),
-                 ('libcxxabi',     'bc', create_libcxxabi,   libcxxabi_symbols,   ['libc'],      False),
+                 ('libcxxabi',     'bc', create_libcxxabi,   libcxxabi_symbols,   ['libc'],      True),
                  ('gl',            'bc', create_gl,          gl_symbols,          ['libc'],      False),
                  ('al',            'bc', create_al,          al_symbols,          ['libc'],      False),
                  ('html5',         'bc', create_html5,       html5_symbols,       ['html5'],     False),
