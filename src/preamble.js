@@ -1805,9 +1805,6 @@ function removeRunDependency(id) {
   }
 }
 
-Module["preloadedImages"] = {}; // maps url to image data
-Module["preloadedAudios"] = {}; // maps url to audio data
-
 #if PGO
 var PGOMonitor = {
   called: {},

@@ -1362,6 +1362,10 @@ var LibrarySDL = {
     SDL.DOMEventToSDLEvent['joystick_axis_motion'] = 0x600 /* SDL_JOYAXISMOTION */;
     SDL.DOMEventToSDLEvent['joystick_button_down'] = 0x603 /* SDL_JOYBUTTONDOWN */;
     SDL.DOMEventToSDLEvent['joystick_button_up'] = 0x604 /* SDL_JOYBUTTONUP */;
+
+    // make sure browser support is ready (including preloading support)
+    Browser.init();
+
     return 0; // success
   },
 

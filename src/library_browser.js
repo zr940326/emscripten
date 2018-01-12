@@ -81,10 +81,12 @@ var LibraryBrowser = {
     workers: [],
 
     init: function() {
-      if (!Module["preloadPlugins"]) Module["preloadPlugins"] = []; // needs to exist even in workers
-
       if (Browser.initted) return;
       Browser.initted = true;
+
+      if (!Module["preloadPlugins"]) Module["preloadPlugins"] = []; // needs to exist even in workers
+      if (!Module["preloadedImages"]) Module["preloadedImages"] = {};
+      if (!Module["preloadedAudios"]) Module["preloadedAudios"] = {};
 
       try {
         new Blob();
@@ -1445,6 +1447,7 @@ var LibraryBrowser = {
 
     path = PATH.resolve(path);
 
+    if (!Module["preloadedImages"]) Module["preloadedImages"] = {};
     var canvas = Module["preloadedImages"][path];
     if (canvas) {
       var ctx = canvas.getContext("2d");
