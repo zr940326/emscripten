@@ -1447,7 +1447,8 @@ var LibraryBrowser = {
 
     path = PATH.resolve(path);
 
-    if (!Module["preloadedImages"]) Module["preloadedImages"] = {};
+    Browser.init();
+
     var canvas = Module["preloadedImages"][path];
     if (canvas) {
       var ctx = canvas.getContext("2d");
