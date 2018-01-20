@@ -1272,6 +1272,11 @@ def create_exports(exported_implemented_functions, in_table, function_table_data
       exports.append(quote('_' + str(k)) + ': ' + str(v))
     # aliases become additional exports
     for k, v in metadata['aliases'].items():
+      # an alias may point to a function, but it may also point to a constant,
+      # if it is a named global
+      short = v[1:]
+      if short in metadata['namedGlobals']:
+        v = metadata['namedGlobals'][short]
       exports.append(quote(str(k)) + ': ' + str(v))
   return '{ ' + ', '.join(exports) + ' }'
 
