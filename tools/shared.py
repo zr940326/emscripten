@@ -2242,6 +2242,7 @@ class Building(object):
     # first, get the JS part of the graph
     txt = Building.js_optimizer_no_asmjs(js_file, ['emitDCEGraph', 'noEmitAst'], return_output=True)
     graph = json.loads(txt)
+    graph.append({'name':'pthread-main.js', 'reaches':['emcc$export$dynCall_ii', 'emcc$export$establishStackSpace'], 'root':True})
     # ensure that functions expected to be exported to the outside are roots
     for item in graph:
       if 'export' in item:
