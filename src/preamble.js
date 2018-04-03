@@ -2231,7 +2231,7 @@ function integrateWasmJS() {
       }
     }
 
-#if BINARYEN_ASYNC_COMPILATION
+#if WASM_ASYNC_COMPILATION
 #if RUNTIME_LOGGING
     Module['printErr']('asynchronously preparing wasm');
 #endif

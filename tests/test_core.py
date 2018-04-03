@@ -58,7 +58,7 @@ def no_windows(note=''):
 def sync(f):
   def decorated(self):
     if self.is_wasm():
-      self.emcc_args += ['-s', 'BINARYEN_ASYNC_COMPILATION=0'] # test is set up synchronously
+      self.emcc_args += ['-s', 'WASM_ASYNC_COMPILATION=0'] # test is set up synchronously
     f(self)
   return decorated
 

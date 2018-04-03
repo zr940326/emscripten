@@ -708,9 +708,9 @@ There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR P
       # Handle aliases in settings flags. These are settings whose name
       # has changed.
       settings_aliases = {
-          'BINARYEN': 'WASM',
-          'BINARYEN_MEM_MAX': 'WASM_MEM_MAX',
-          # TODO: change most (all?) other BINARYEN* names to WASM*
+        'BINARYEN': 'WASM',
+        'BINARYEN_MEM_MAX': 'WASM_MEM_MAX',
+        'BINARYEN_ASYNC_COMPILATION': 'WASM_ASYNC_COMPILATION',
       }
       settings_key_changes = set()
       def setting_sub(s):
@@ -1236,18 +1236,18 @@ There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR P
           sys.exit(1)
         options.memory_init_file = True
         # async compilation requires wasm-only mode, and also not interpreting (the interpreter needs sync input)
-        if shared.Settings.BINARYEN_ASYNC_COMPILATION == 1 and shared.Building.is_wasm_only() and 'interpret' not in shared.Settings.BINARYEN_METHOD:
+        if shared.Settings.WASM_ASYNC_COMPILATION == 1 and shared.Building.is_wasm_only() and 'interpret' not in shared.Settings.BINARYEN_METHOD:
           # async compilation requires a swappable module - we swap it in when it's ready
           shared.Settings.SWAPPABLE_ASM_MODULE = 1
         else:
           # if not wasm-only, we can't do async compilation as the build can run in other
           # modes than wasm (like asm.js) which may not support an async step
-          shared.Settings.BINARYEN_ASYNC_COMPILATION = 0
+          shared.Settings.WASM_ASYNC_COMPILATION = 0
           warning = 'This will reduce performance and compatibility (some browsers limit synchronous compilation), see https://github.com/kripken/emscripten/wiki/WebAssembly#codegen-effects'
-          if 'BINARYEN_ASYNC_COMPILATION=1' in settings_changes:
-            logging.warning('BINARYEN_ASYNC_COMPILATION requested, but disabled because of user options. ' + warning)
-          elif 'BINARYEN_ASYNC_COMPILATION=0' not in settings_changes:
-            logging.warning('BINARYEN_ASYNC_COMPILATION disabled due to user options. ' + warning)
+          if 'WASM_ASYNC_COMPILATION=1' in settings_changes:
+            logging.warning('WASM_ASYNC_COMPILATION requested, but disabled because of user options. ' + warning)
+          elif 'WASM_ASYNC_COMPILATION=0' not in settings_changes:
+            logging.warning('WASM_ASYNC_COMPILATION disabled due to user options. ' + warning)
         # run safe-heap as a binaryen pass
         if shared.Settings.SAFE_HEAP and shared.Building.is_wasm_only():
           if shared.Settings.BINARYEN_PASSES:
@@ -2667,7 +2667,7 @@ def generate_html(target, options, js_target, target_basename,
     codeXHR.send(null);
 ''' % (shared.JS.get_subresource_location(asm_target), '\n'.join(asm_mods), script.inline)
 
-    if shared.Settings.WASM and not shared.Settings.BINARYEN_ASYNC_COMPILATION:
+    if shared.Settings.WASM and not shared.Settings.WASM_ASYNC_COMPILATION:
       # We need to load the wasm file before anything else, it has to be synchronously ready TODO: optimize
       script.un_src()
       script.inline = '''

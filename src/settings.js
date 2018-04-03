@@ -760,9 +760,10 @@ var WASM_MEM_MAX = -1; // Set the maximum size of memory in the wasm module (in 
                        // Without this, TOTAL_MEMORY is used (as it is used for the initial value),
                        // or if memory growth is enabled, no limit is set. This overrides both of those.
                        // (This option was formerly called BINARYEN_MEM_MAX)
-var BINARYEN_ASYNC_COMPILATION = 1; // Whether to compile the wasm asynchronously, which is more
-                                    // efficient and does not block the main thread. This is currently
-                                    // required for all but the smallest modules to run in V8
+var WASM_ASYNC_COMPILATION = 1; // Whether to compile the wasm asynchronously, which is more
+                                // efficient and does not block the main thread. This is currently
+                                // required for all but the smallest modules to run in V8.
+                                // (This option was formerly called BINARYEN_ASYNC_COMPILATION.)
 var BINARYEN_ROOT = ""; // Directory where we can find Binaryen. Will be automatically set for you,
                         // but you can set it to override if you are a Binaryen developer.
 
