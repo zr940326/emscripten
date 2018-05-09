@@ -225,7 +225,7 @@ function JSify(data, functionsOnly) {
 
       // if the function was implemented in compiled code, we just need to export it so we can reach it from JS
       if (finalName in IMPLEMENTED_FUNCTIONS) {
-        EXPORTED_FUNCTIONS[finalName] = 1;
+        // XXX BREAK IT EXPORTED_FUNCTIONS[finalName] = 1;
         // stop here: we don't need to add anything from our js libraries, not even deps, compiled code is on it
         return '';
       }
