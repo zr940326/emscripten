@@ -35,7 +35,7 @@ var NEED_ALL_ASM2WASM_IMPORTS = BINARYEN_METHOD != 'native-wasm' || BINARYEN_TRA
 // also set when in a linkable module, as the main() function might
 // arrive from a dynamically-linked library, and not necessarily
 // the current compilation unit.
-var HAS_MAIN = ('_main' in IMPLEMENTED_FUNCTIONS) || MAIN_MODULE || SIDE_MODULE;
+var HAS_MAIN = ('_main' in EXPORTED_FUNCTIONS) || MAIN_MODULE || SIDE_MODULE;
 
 var WASM_BACKEND_WITH_RESERVED_FUNCTION_POINTERS =
   WASM_BACKEND && RESERVED_FUNCTION_POINTERS;
@@ -223,9 +223,10 @@ function JSify(data, functionsOnly) {
         var finalName = '_' + ident;
       }
 
-      // if the function was implemented in compiled code, we just need to export it so we can reach it from JS
-      if (finalName in IMPLEMENTED_FUNCTIONS) {
-        // XXX BREAK IT EXPORTED_FUNCTIONS[finalName] = 1;
+      // if the function was implemented in compiled code, we just need to export it so we can reach it from JS.
+      // note that if it was implemented there, it must have also been exported so that we can use it, see
+      // deps_info.json handling in system_libs.py
+      if (finalName in EXPORTED_FUNCTIONS) {
         // stop here: we don't need to add anything from our js libraries, not even deps, compiled code is on it
         return '';
       }
@@ -237,7 +238,7 @@ function JSify(data, functionsOnly) {
       var noExport = false;
 
       if ((!LibraryManager.library.hasOwnProperty(ident) && !LibraryManager.library.hasOwnProperty(ident + '__inline')) || SIDE_MODULE) {
-        if (!(finalName in IMPLEMENTED_FUNCTIONS)) {
+        if (!(finalName in EXPORTED_FUNCTIONS)) {
           if (VERBOSE || ident.substr(0, 11) !== 'emscripten_') { // avoid warning on emscripten_* functions which are for internal usage anyhow
             if (!LINKABLE) {
               if (ERROR_ON_UNDEFINED_SYMBOLS) error('unresolved symbol: ' + ident);
