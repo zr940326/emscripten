@@ -3,7 +3,7 @@
   "freopen": ["free"],
   "munmap": ["free"],
   "getenv": ["malloc", "free", "_get_environ"],
-  "clearenv": ["_get_environ"],
+  "clearenv": ["_get_environ", "find the breakages of removing each of these - multi levels! - and find ways to error/warn"],
   "setenv": ["_get_environ"],
   "unsetenv": ["_get_environ"],
   "putenv": ["_get_environ"],

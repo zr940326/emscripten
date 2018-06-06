@@ -29,8 +29,8 @@ char*** _get_environ() {
 
 extern void __buildEnvironment(void*);
 
-// TODO: this needs very high priority, so user ctors that use environ do not happen first
-__attribute__((constructor))
+__attribute__((constructor (101))) // ensure a high priority for this constructor
+// TODO: build and see if the bitcode is any different...
 void __emscripten_environ_constructor(void) {
   __buildEnvironment((void*)&environ);
 }
