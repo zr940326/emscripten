@@ -1,7 +1,5 @@
 // {{PREAMBLE_ADDITIONS}}
 
-var STACK_ALIGN = {{{ STACK_ALIGN }}};
-
 #if ASSERTIONS
 // stack management, and other functionality that is provided by the compiled code,
 // should not be used before it is ready
@@ -153,7 +151,7 @@ function loadWebAssemblyModule(binary) {
   memoryAlign = Math.pow(2, memoryAlign);
   tableAlign = Math.pow(2, tableAlign);
   // finalize alignments and verify them
-  memoryAlign = Math.max(memoryAlign, STACK_ALIGN); // we at least need stack alignment
+  memoryAlign = Math.max(memoryAlign, {{{ STACK_ALIGN }}}); // we at least need stack alignment
   assert(tableAlign === 1);
   // prepare memory
   var memoryStart = alignMemory(getMemory(memorySize + memoryAlign), memoryAlign); // TODO: add to cleanups
