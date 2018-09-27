@@ -94,16 +94,28 @@ class sanity(RunnerCore):
     super(sanity, self).tearDown()
     print('time:', time.time() - self.start_time)
 
-  def do(self, command):
-    print(' '.join(command))
+  def do(self, command, expect_fail=False):
+    print('Running: ' + ' '.join(command))
     if type(command) is not list:
       command = [command]
     if command[0] == EMCC:
       command = [PYTHON] + command
 
-    return run_process(command, stdout=PIPE, stderr=STDOUT, check=False).stdout
+    proc = run_process(command, stdout=PIPE, stderr=STDOUT, check=False)
+    if expect_fail:
+      if proc.returncode == 0:
+        print("Expected failure: " + str(command))
+        print(command)
+        print(proc.stdout)
+      self.assertNotEqual(proc.returncode, 0)
+    else:
+      if proc.returncode != 0:
+        print("Expected success: " + str(command))
+        print(proc.stdout)
+      self.assertEqual(proc.returncode, 0)
+    return proc.stdout
 
-  def check_working(self, command, expected=None):
+  def check_working(self, command, expected=None, expect_fail=False):
     if type(command) is not list:
       command = [command]
     if expected is None:
@@ -111,8 +123,9 @@ class sanity(RunnerCore):
         expected = 'no input files'
       else:
         expected = "could not find the following tests: blahblah"
+      expect_fail = True
 
-    output = self.do(command)
+    output = self.do(command, expect_fail=expect_fail)
     self.assertContained(expected, output)
     return output
 
@@ -178,9 +191,8 @@ class sanity(RunnerCore):
 
       # Second run, with bad EM_CONFIG
       for settings in ['blah', 'LLVM_ROOT="blarg"; JS_ENGINES=[]; COMPILER_ENGINE=NODE_JS=SPIDERMONKEY_ENGINE=[]']:
-        f = open(CONFIG_FILE, 'w')
-        f.write(settings)
-        f.close()
+        with open(CONFIG_FILE, 'w') as f:
+          f.write(settings)
         output = self.do(command)
 
         if 'LLVM_ROOT' not in settings:
@@ -199,16 +211,14 @@ class sanity(RunnerCore):
     self.assertNotContained(CLOSURE_WARNING, output)
 
     # Append a bad path for closure, will warn
-    f = open(CONFIG_FILE, 'a')
-    f.write('CLOSURE_COMPILER = "/tmp/nowhere/nothingtoseehere/kjadsfkjwelkjsdfkqgas/nonexistent.txt"\n')
-    f.close()
+    with open(CONFIG_FILE, 'a') as f:
+      f.write('CLOSURE_COMPILER = "/tmp/nowhere/nothingtoseehere/kjadsfkjwelkjsdfkqgas/nonexistent.txt"\n')
     output = self.check_working(EMCC, CLOSURE_WARNING)
 
     # And if you actually try to use the bad path, will be fatal
-    f = open(CONFIG_FILE, 'a')
-    f.write('CLOSURE_COMPILER = "/tmp/nowhere/nothingtoseehere/kjadsfkjwelkjsdfkqgas/nonexistent.txt"\n')
-    f.close()
-    output = self.check_working([EMCC, '-s', '--closure', '1'] + MINIMAL_HELLO_WORLD + ['-O2'], CLOSURE_FATAL)
+    with open(CONFIG_FILE, 'a') as f:
+      f.write('CLOSURE_COMPILER = "/tmp/nowhere/nothingtoseehere/kjadsfkjwelkjsdfkqgas/nonexistent.txt"\n')
+    output = self.check_working([EMCC, '-s', '--closure', '1'] + MINIMAL_HELLO_WORLD + ['-O2'], CLOSURE_FATAL, expect_fail=True)
 
     # With a working path, all is well
     restore_and_set_up()
@@ -481,7 +491,7 @@ fi
     restore_and_set_up()
 
     Cache.erase()
-    assert not os.path.exists(EMCC_CACHE)
+    self.assertFalse(os.path.exists(EMCC_CACHE))
 
     with env_modify({'EMCC_DEBUG': '1'}):
       # Building a file that *does* need something *should* trigger cache
@@ -521,7 +531,7 @@ fi
     ensure_cache()
     with env_modify({'LLVM': 'waka'}):
       self.assertTrue(os.path.exists(EMCC_CACHE))
-      output = self.do([PYTHON, EMCC])
+      output = self.do([PYTHON, EMCC], expect_fail=True)
       self.assertIn(ERASING_MESSAGE, output)
       self.assertFalse(os.path.exists(EMCC_CACHE))
 
