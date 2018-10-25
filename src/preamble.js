@@ -1098,7 +1098,12 @@ try {
 #endif
 
 var TOTAL_STACK = Module['TOTAL_STACK'] || {{{ TOTAL_STACK }}};
-var TOTAL_MEMORY = Module['TOTAL_MEMORY'] || {{{ TOTAL_MEMORY }}};
+var TOTAL_MEMORY = {{{ TOTAL_MEMORY }}};
+#if ASSERTIONS
+if (Module['TOTAL_MEMORY']) {
+  assert(Module['TOTAL_MEMORY'] === TOTAL_MEMORY, 'the provided value of TOTAL_MEMORY ' + Module['TOTAL_MEMORY'] + ' must match the compile-time value of ' + TOTAL_MEMORY + ' (in the past emscripten allowed changing this at runtime, but as wasm bakes it into the binary, it no longer makes sense to support)');
+}
+#endif
 if (TOTAL_MEMORY < TOTAL_STACK) err('TOTAL_MEMORY should be larger than TOTAL_STACK, was ' + TOTAL_MEMORY + '! (TOTAL_STACK=' + TOTAL_STACK + ')');
 
 // Initialize the runtime's memory
