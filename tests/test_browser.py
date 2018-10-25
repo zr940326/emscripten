@@ -3233,6 +3233,17 @@ window.close = function() {
       open('test.c', 'w').write(self.with_report_result(src))
       # generate a dummy file
       open('dummy_file', 'w').write('dummy')
+      # compile the code with the modularize feature and the preload-file option enabled
+      # no wasm, since this tests customizing total memory at runtime
+      run_process([PYTHON, EMCC, 'test.c', '-s', 'WASM=0', '-s', 'MODULARIZE=1', '-s', 'EXPORT_NAME="Foo"', '--preload-file', 'dummy_file'] + opts)
+      open('a.html', 'w').write('''
+        <script src="a.out.js"></script>
+        <script>
+          // instantiate the Foo module with custom TOTAL_MEMORY value
+          var foo = Foo({ TOTAL_MEMORY: %d });
+        </script>
+      ''' % totalMemory)
+      self.run_browser('a.html', '...', '/report_result?0')
 
   def test_webidl(self):
     # see original in test_core.py

@@ -7945,6 +7945,14 @@ int main() {
     print(sizes)
     self.assertLess(sizes["['-O2']"], sizes["['-O2', '--profiling-funcs']"], 'when -profiling-funcs, the size increases due to function names')
 
+  def test_binaryen_warn_mem(self):
+    # wasm does not allow settinbg TOTAL_MEMORY at runtime, and we assert that you don't set a different value there, to avoid confusion
+    open('pre.js', 'w').write('var Module = { TOTAL_MEMORY: 50 * 1024 * 1024 };\n')
+    run_process([PYTHON, EMCC, path_from_root('tests', 'hello_world.cpp'), '-s', 'BINARYEN_METHOD="native-wasm"', '-s', 'TOTAL_MEMORY=' + str(16 * 1024 * 1024), '--pre-js', 'pre.js', '-s', 'BINARYEN_ASYNC_COMPILATION=0'])
+    out = run_js('a.out.js', full_output=True, stderr=PIPE, assert_returncode=None)
+    print(out)
+    1/0
+
   @unittest.skipIf(SPIDERMONKEY_ENGINE not in JS_ENGINES, 'cannot run without spidermonkey')
   def test_binaryen_warn_sync(self):
     # interpreting will disable async
