@@ -2363,7 +2363,7 @@ The current type of b is: 9
     self.build_dlfcn_lib(lib_src, dirname, filename)
 
     self.prep_dlfcn_main()
-    self.set_setting('EXPORTED_FUNCTIONS', ['_main'])
+    self.clear_setting('EXPORTED_FUNCTIONS')
     src = r'''
       #include <stdio.h>
       #include <stdlib.h>
@@ -2380,10 +2380,14 @@ The current type of b is: 9
           puts(dlerror());
           abort();
         }
-        printf("load %p\n", lib_handle);
+        printf("dll handle: %p\n", lib_handle);
         intfunc x = (intfunc)dlsym(lib_handle, "foo");
-        printf("foo func %p\n", x);
+        printf("foo func handle: %p\n", x);
         if (p == 0) return 1;
+        if (!x) {
+          printf("dlsym failed: %s\n", dlerror());
+          return 1;
+        }
         printf("|%d|\n", x(81234567));
         return 0;
       }
@@ -2520,6 +2524,8 @@ The current type of b is: 9
 
       int global = 42;
 
+      extern "C" {
+
       extern void parent_func(); // a function that is defined in the parent
 
       void lib_fptr() {
@@ -2531,10 +2537,12 @@ The current type of b is: 9
         p_f();
       }
 
-      extern "C" void (*func(int x, void(*fptr)()))() {
+      void (*func(int x, void(*fptr)()))() {
         printf("In func: %d\\n", x);
         fptr();
         return lib_fptr;
+      }
+
       }
       '''
     dirname = self.get_dir()
@@ -2549,6 +2557,8 @@ The current type of b is: 9
       #include <emscripten.h>
 
       typedef void (*FUNCTYPE(int, void(*)()))();
+
+      extern "C" {
 
       FUNCTYPE func;
 
@@ -2594,6 +2604,8 @@ The current type of b is: 9
         printf("Var: %d\\n", *global);
 
         return 0;
+      }
+
       }
       '''
     self.set_setting('EXPORTED_FUNCTIONS', ['_main'])
@@ -2924,7 +2936,7 @@ The current type of b is: 9
       void callint(voidfunc f, int x) { f(x); }
 
       void void_0() { printf("void 0\n"); }
-      void void_1() { printf("void 1\n"); }
+      void void_1() { puts("void 1"); }
       voidfunc getvoid(int i) {
         switch(i) {
           case 0: return void_0;
@@ -2945,8 +2957,7 @@ The current type of b is: 9
       '''
     self.set_setting('EXPORTED_FUNCTIONS', ['_callvoid', '_callint', '_getvoid', '_getint'])
     dirname = self.get_dir()
-    filename = os.path.join(dirname, 'liblib.c')
-    self.build_dlfcn_lib(lib_src, dirname, filename)
+    self.build_dlfcn_lib(lib_src, dirname, os.path.join(dirname, 'liblib.c'))
 
     self.prep_dlfcn_main()
     src = r'''
@@ -2963,8 +2974,8 @@ The current type of b is: 9
       typedef voidfunc (*voidgetter)(int);
       typedef intfunc (*intgetter)(int);
 
-      void void_main() { printf("main.\n"); }
-      void int_main(int x) { printf("main %d\n", x); }
+      void void_main() { printf("void_main.\n"); }
+      void int_main(int x) { printf("int_main %d\n", x); }
 
       int main() {
         printf("go\n");
@@ -2982,8 +2993,11 @@ The current type of b is: 9
 
         voidgetter getvoid = (voidgetter)dlsym(lib_handle, "getvoid");
         assert(getvoid != NULL);
-        callvoid(getvoid(0));
-        callvoid(getvoid(1));
+        voidfunc v = getvoid(0);
+        callvoid(v);
+
+        v = getvoid(1);
+        callvoid(v);
 
         intgetter getint = (intgetter)dlsym(lib_handle, "getint");
         assert(getint != NULL);
@@ -2998,8 +3012,8 @@ The current type of b is: 9
       '''
     self.set_setting('EXPORTED_FUNCTIONS', ['_main', '_malloc'])
     self.do_run(src, '''go
-main.
-main 201
+void_main.
+int_main 201
 void 0
 void 1
 int 0 54
@@ -3276,13 +3290,13 @@ ok
     def test():
       self.dylink_test('''
         #include <stdio.h>
-        extern int sidey();
+        extern "C" int sidey();
         int main() {
           printf("other says %d.\\n", sidey());
           return 0;
         }
       ''', '''
-        int sidey() { return 11; }
+        extern "C" int sidey() { return 11; }
       ''', 'other says 11.')
     test()
 

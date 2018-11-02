@@ -1295,8 +1295,8 @@ def verify_settings():
     if not os.path.exists(WASM_LD) or run_process([WASM_LD, '--version'], stdout=PIPE, stderr=PIPE, check=False).returncode != 0:
       exit_with_error('WASM_BACKEND selected but could not find lld (wasm-ld): %s', WASM_LD)
 
-    if Settings.SIDE_MODULE or Settings.MAIN_MODULE:
-      exit_with_error('emcc: MAIN_MODULE and SIDE_MODULE are not yet supported by the LLVM wasm backend')
+    if Settings.EMULATED_FUNCTION_POINTERS:
+      exit_with_error('emcc: EMULATED_FUNCTION_POINTERS is not meaningful with the wasm backend.')
 
 
 Settings = SettingsManager()
@@ -1936,13 +1936,8 @@ class Building(object):
     args = [a for a in args if a not in ('--start-group', '--end-group')]
     cmd = [
         WASM_LD,
-        '-z',
-        'stack-size=%s' % Settings.TOTAL_STACK,
-        '--global-base=%s' % Settings.GLOBAL_BASE,
-        '--initial-memory=%d' % Settings.TOTAL_MEMORY,
         '-o',
         target,
-        '--no-entry',
         '--allow-undefined',
         '--import-memory',
         '--import-table',
@@ -1953,10 +1948,6 @@ class Building(object):
         '--lto-O%d' % lto_level,
     ] + args
 
-    if Settings.WASM_MEM_MAX != -1:
-      cmd.append('--max-memory=%d' % Settings.WASM_MEM_MAX)
-    elif not Settings.ALLOW_MEMORY_GROWTH:
-      cmd.append('--max-memory=%d' % Settings.TOTAL_MEMORY)
     if Settings.USE_PTHREADS:
       cmd.append('--shared-memory')
 
@@ -1973,7 +1964,27 @@ class Building(object):
     for export in Settings.EXPORTED_FUNCTIONS:
       cmd += ['--export', export[1:]] # Strip the leading underscore
     if Settings.EXPORT_ALL:
-      cmd += ['--export-all']
+      cmd.append('--export-all')
+
+    if Settings.SIDE_MODULE:
+      cmd.append('-shared')
+    else:
+      cmd += [
+        '--export-dynamic',
+        '-z',
+        'stack-size=%s' % Settings.TOTAL_STACK,
+        '--global-base=%s' % Settings.GLOBAL_BASE,
+        '--initial-memory=%d' % Settings.TOTAL_MEMORY,
+        '--no-entry'
+      ]
+      if Settings.WASM_MEM_MAX != -1:
+        cmd.append('--max-memory=%d' % Settings.WASM_MEM_MAX)
+      elif not Settings.ALLOW_MEMORY_GROWTH:
+        cmd.append('--max-memory=%d' % Settings.TOTAL_MEMORY)
+
+    if Settings.LINKABLE:
+      cmd.append('--export-all')
+      cmd.append('--no-gc-sections')
 
     cmd += opts
 
@@ -3154,18 +3165,14 @@ class WebAssembly(object):
   @staticmethod
   def make_shared_library(js_file, wasm_file, needed_dynlibs):
     # a wasm shared library has a special "dylink" section, see tools-conventions repo
-    (mem_size, table_size, mem_align) = WebAssembly.get_js_data(js_file, True)
+    assert not Settings.WASM_BACKEND
+    mem_size, table_size, mem_align = WebAssembly.get_js_data(js_file, True)
     mem_align = int(math.log(mem_align, 2))
     logger.debug('creating wasm dynamic library with mem size %d, table size %d, align %d' % (mem_size, table_size, mem_align))
-    wso = js_file + '.wso'
-    # write the binary
+
+    # Write new wasm binary with 'dylink' section
     wasm = open(wasm_file, 'rb').read()
-    f = open(wso, 'wb')
-    f.write(wasm[0:8]) # copy magic number and version
-    # write the special section
-    f.write(b'\0') # user section is code 0
-    # need to find the size of this section
-    name = b"\06dylink" # section name, including prefixed size
+    section_name = b"\06dylink" # section name, including prefixed size
     contents = (WebAssembly.lebify(mem_size) + WebAssembly.lebify(mem_align) +
                 WebAssembly.lebify(table_size) + WebAssembly.lebify(0))
 
@@ -3196,12 +3203,18 @@ class WebAssembly(object):
       contents += WebAssembly.lebify(len(dyn_needed))
       contents += dyn_needed
 
-    size = len(name) + len(contents)
-    f.write(WebAssembly.lebify(size))
-    f.write(name)
-    f.write(contents)
-    f.write(wasm[8:]) # copy rest of binary
-    f.close()
+    section_size = len(section_name) + len(contents)
+    wso = js_file + '.wso'
+    with open(wso, 'wb') as f:
+      # copy magic number and version
+      f.write(wasm[0:8])
+      # write the special section
+      f.write(b'\0') # user section is code 0
+      f.write(WebAssembly.lebify(section_size))
+      f.write(section_name)
+      f.write(contents)
+      # copy rest of binary
+      f.write(wasm[8:])
     return wso
 
 

@@ -2299,7 +2299,7 @@ def create_sending_wasm(invoke_funcs, jscall_sigs, forwarded_json, metadata):
   if shared.Settings.SAFE_HEAP:
     basic_funcs += ['segfault', 'alignfault']
 
-  basic_vars = ['DYNAMICTOP_PTR']
+  basic_vars = ['DYNAMICTOP_PTR', 'tempDoublePtr']
 
   if not shared.Settings.RELOCATABLE:
     global_vars = metadata['externs']

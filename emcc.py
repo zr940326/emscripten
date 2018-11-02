@@ -80,7 +80,6 @@ SUPPORTED_LINKER_FLAGS = (
 
 LIB_PREFIXES = ('', 'lib')
 
-
 DEFERRED_RESPONSE_FILES = ('EMTERPRETIFY_BLACKLIST', 'EMTERPRETIFY_WHITELIST', 'EMTERPRETIFY_SYNCLIST')
 
 # Mapping of emcc opt levels to llvm opt levels. We use llvm opt level 3 in emcc
@@ -324,7 +323,11 @@ class JSOptimizer(object):
 
 
 def embed_memfile(options):
-  return shared.Settings.SINGLE_FILE or (shared.Settings.MEM_INIT_METHOD == 0 and (not shared.Settings.MAIN_MODULE and not shared.Settings.SIDE_MODULE and not use_source_map(options)))
+  return shared.Settings.SINGLE_FILE \
+          or (shared.Settings.MEM_INIT_METHOD == 0 \
+              and (not shared.Settings.MAIN_MODULE \
+                   and not shared.Settings.SIDE_MODULE \
+                   and not use_source_map(options)))
 
 
 def apply_settings(changes):
@@ -1073,6 +1076,12 @@ There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR P
         'allocate',
         'getMemory',
       ]
+      if shared.Settings.WASM_BACKEND:
+        shared.Settings.EXPORTED_RUNTIME_METHODS += [
+          'stackSave',
+          'stackRestore',
+        ]
+
       shared.Settings.ALLOW_TABLE_GROWTH = 1
 
     if shared.Settings.USE_PTHREADS:
@@ -1141,7 +1150,7 @@ There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR P
 
     if shared.Settings.RELOCATABLE:
       assert shared.Settings.GLOBAL_BASE < 1
-      if 'EMULATED_FUNCTION_POINTERS' not in settings_key_changes:
+      if 'EMULATED_FUNCTION_POINTERS' not in settings_key_changes and not shared.Settings.WASM_BACKEND:
         shared.Settings.EMULATED_FUNCTION_POINTERS = 2 # by default, use optimized function pointer emulation
       shared.Settings.ERROR_ON_UNDEFINED_SYMBOLS = 0
       shared.Settings.WARN_ON_UNDEFINED_SYMBOLS = 0
@@ -1609,6 +1618,8 @@ There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR P
         output_file = get_bitcode_file(input_file)
         temp_files.append((i, output_file))
         args = get_clang_args([input_file]) + ['-c', '-o', output_file]
+        if shared.Settings.WASM_BACKEND and shared.Settings.SIDE_MODULE:
+          args.append('-fPIC')
         if shared.Settings.WASM_OBJECT_FILES:
           for a in shared.Building.llvm_backend_args():
             args += ['-mllvm', a]
@@ -1710,11 +1721,11 @@ There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR P
             # we have multiple files: Link them
             logger.debug('link: ' + str(linker_inputs) + specified_target)
             shared.Building.link_to_object(linker_inputs, specified_target)
-        logger.debug('stopping at bitcode')
+        logger.debug('stopping at object file')
         if shared.Settings.SIDE_MODULE:
-          exit_with_error('SIDE_MODULE must only be used when compiling to an executable shared library, and not when emitting LLVM bitcode. That is, you should be emitting a .wasm file (for wasm) or a .js file (for asm.js). Note that when compiling to a typical native suffix for a shared library (.so, .dylib, .dll; which many build systems do) then Emscripten emits an LLVM bitcode file, which you should then compile to .wasm or .js with SIDE_MODULE.')
-        if final_suffix.lower() in ('.so', '.dylib', '.dll'):
-          logger.warning('When Emscripten compiles to a typical native suffix for shared libraries (.so, .dylib, .dll) then it emits an LLVM bitcode file. You should then compile that to an emscripten SIDE_MODULE (using that flag) with suffix .wasm (for wasm) or .js (for asm.js). (You may also want to adapt your build system to emit the more standard suffix for a file with LLVM bitcode, \'.bc\', which would avoid this warning.)')
+          exit_with_error('SIDE_MODULE should only be specified when linking')
+        if shared.Settings.SIDE_MODULE:
+          exit_with_error('MAIN_MODULE should only be specified when linking')
         return 0
 
     # exit block 'process inputs'
@@ -1842,7 +1853,8 @@ There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR P
             save_intermediate('lto', 'bc')
             link_opts = []
           else:
-            # At minimum remove dead functions etc., this potentially saves a lot in the size of the generated code (and the time to compile it)
+            # At minimum remove dead functions etc., this potentially saves a
+            # lot in the size of the generated code (and the time to compile it)
             link_opts += shared.Building.get_safe_internalize() + ['-globaldce']
 
           if options.cfi:
@@ -2668,19 +2680,20 @@ def do_binaryen(target, asm_target, options, memfile, wasm_binary_target,
     if DEBUG:
       save_intermediate_with_wasm('pre-eval-ctors', wasm_binary_target)
     shared.Building.eval_ctors(final, wasm_binary_target, binaryen_bin, debug_info=debug_info)
-  # after generating the wasm, do some final operations
-  if shared.Settings.SIDE_MODULE:
-    wso = shared.WebAssembly.make_shared_library(final, wasm_binary_target, shared.Settings.RUNTIME_LINKED_LIBS)
-    # replace the wasm binary output with the dynamic library. TODO: use a specific suffix for such files?
-    shutil.move(wso, wasm_binary_target)
-    if not shared.Settings.WASM_BACKEND and not DEBUG:
-      os.unlink(asm_target) # we don't need the asm.js, it can just confuse
 
+  # after generating the wasm, do some final operations
   if shared.Settings.EMIT_EMSCRIPTEN_METADATA:
     wso = shared.WebAssembly.add_emscripten_metadata(final, wasm_binary_target)
     shutil.move(wso, wasm_binary_target)
 
   if shared.Settings.SIDE_MODULE:
+    if not shared.Settings.WASM_BACKEND:
+      wso = shared.WebAssembly.make_shared_library(final, wasm_binary_target, shared.Settings.RUNTIME_LINKED_LIBS)
+      # replace the wasm binary output with the dynamic library.
+      # TODO: use a specific suffix for such files?
+      shutil.move(wso, wasm_binary_target)
+      if not DEBUG:
+        os.unlink(asm_target) # we don't need the asm.js, it can just confuse
     sys.exit(0) # and we are done.
 
   if options.opt_level >= 2:

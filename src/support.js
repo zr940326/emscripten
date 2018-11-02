@@ -418,6 +418,7 @@ function loadWebAssemblyModule(binary, flags) {
         if (prop in obj) {
           return obj[prop]; // already present
         }
+        //console.log("getting dll func: " + prop);
         if (prop.startsWith('g$')) {
           // a global. the g$ function returns the global address.
           var name = prop.substr(2); // without g$ prefix
@@ -436,11 +437,15 @@ function loadWebAssemblyModule(binary, flags) {
           return env[prop] = invoke_X;
         }
         // if not a global, then a function - call it indirectly
-        return env[prop] = function() {
-#if ASSERTIONS
-          assert(Module[prop], 'missing linked function ' + prop + '. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment');
+        var full_prop = prop;
+#if WASM_BACKEND
+        full_prop = '_' + full_prop;
 #endif
-          return Module[prop].apply(null, arguments);
+        return env[full_prop] = function() {
+#if ASSERTIONS
+          assert(Module[full_prop], 'missing linked function ' + full_prop);
+#endif
+          return Module[full_prop].apply(null, arguments);
         };
       }
     };
@@ -461,6 +466,7 @@ function loadWebAssemblyModule(binary, flags) {
 #endif
 
     function postInstantiation(instance) {
+      //console.log("postInstantiation");
       var exports = {};
 #if ASSERTIONS
       // the table should be unchanged
