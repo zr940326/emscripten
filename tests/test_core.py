@@ -7953,7 +7953,6 @@ def make_run(name, emcc_args, env=None):
     os.chdir(self.get_dir()) # Ensure the directory exists and go there
 
     self.emcc_args = emcc_args[:]
-    Settings.load(self.emcc_args)
     Building.LLVM_OPTS = 0
 
     Building.COMPILER_TEST_OPTS += [
