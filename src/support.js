@@ -27,7 +27,7 @@ function dynamicAlloc(size) {
   var end = (ret + size + 15) & -16;
   HEAP32[DYNAMICTOP_PTR>>2] = end;
   if (end >= TOTAL_MEMORY) {
-    var success = enlargeMemory();
+    var success = _emscripten_enlarge_memory();
     if (!success) {
       HEAP32[DYNAMICTOP_PTR>>2] = ret;
       return 0;

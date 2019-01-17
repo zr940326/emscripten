@@ -15,14 +15,14 @@ static void** DYNAMICTOP_PTR;
 
 // TODO: initialize this more efficiently by hardcoding the value at compile
 //       time, when not linkable.
-void init_memory(void** value) {
+EMSCRIPTEN_KEEPALIVE void init_memory(void** value) {
   DYNAMICTOP_PTR = value;
 }
 
 int brk(void* new) {
   void* total = emscripten_get_total_memory();
 
-#if __EMSCRIPTEN_PTHREADS__
+#ifdef __EMSCRIPTEN_PTHREADS__
 
   // Perform a compare-and-swap loop to update the new dynamic top value. This is because
   // this function can becalled simultaneously in multiple threads.
@@ -65,7 +65,7 @@ void* sbrk(intptr_t increment) {
   void* old = *DYNAMICTOP_PTR;
   void* new = PTR_ADD(old, increment);
   if (brk(new) == -1) {
-    return -1;
+    return (void*)-1;
   }
   return old;
 }
