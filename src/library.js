@@ -467,111 +467,6 @@ LibraryManager.library = {
     return -1;
   },
 
-  // Implement a Linux-like 'memory area' for our 'process'.
-  // Changes the size of the memory area by |bytes|; returns the
-  // address of the previous top ('break') of the memory area
-  // We control the "dynamic" memory - DYNAMIC_BASE to DYNAMICTOP
-  sbrk__asm: true,
-  sbrk__sig: ['ii'],
-  sbrk__deps: ['__setErrNo'],
-  sbrk: function(increment) {
-    increment = increment|0;
-    var oldDynamicTop = 0;
-    var oldDynamicTopOnChange = 0;
-    var newDynamicTop = 0;
-    var totalMemory = 0;
-#if USE_PTHREADS
-    totalMemory = getTotalMemory()|0;
-
-    // Perform a compare-and-swap loop to update the new dynamic top value. This is because
-    // this function can becalled simultaneously in multiple threads.
-    do {
-      oldDynamicTop = Atomics_load(HEAP32, DYNAMICTOP_PTR>>2)|0;
-      newDynamicTop = oldDynamicTop + increment | 0;
-      // Asking to increase dynamic top to a too high value? In pthreads builds we cannot
-      // enlarge memory, so this needs to fail.
-      if (((increment|0) > 0 & (newDynamicTop|0) < (oldDynamicTop|0)) // Detect and fail if we would wrap around signed 32-bit int.
-        | (newDynamicTop|0) < 0 // Also underflow, sbrk() should be able to be used to subtract.
-        | (newDynamicTop|0) > (totalMemory|0)) {
-#if ABORTING_MALLOC
-        abortOnCannotGrowMemory()|0;
-#else
-        ___setErrNo({{{ cDefine('ENOMEM') }}});
-        return -1;
-#endif
-      }
-      // Attempt to update the dynamic top to new value. Another thread may have beat this thread to the update,
-      // in which case we will need to start over by iterating the loop body again.
-      oldDynamicTopOnChange = Atomics_compareExchange(HEAP32, DYNAMICTOP_PTR>>2, oldDynamicTop|0, newDynamicTop|0)|0;
-    } while((oldDynamicTopOnChange|0) != (oldDynamicTop|0));
-#else // singlethreaded build: (-s USE_PTHREADS=0)
-    oldDynamicTop = HEAP32[DYNAMICTOP_PTR>>2]|0;
-    newDynamicTop = oldDynamicTop + increment | 0;
-
-    if (((increment|0) > 0 & (newDynamicTop|0) < (oldDynamicTop|0)) // Detect and fail if we would wrap around signed 32-bit int.
-      | (newDynamicTop|0) < 0) { // Also underflow, sbrk() should be able to be used to subtract.
-#if ABORTING_MALLOC
-      abortOnCannotGrowMemory()|0;
-#endif
-      ___setErrNo({{{ cDefine('ENOMEM') }}});
-      return -1;
-    }
-
-    HEAP32[DYNAMICTOP_PTR>>2] = newDynamicTop;
-    totalMemory = getTotalMemory()|0;
-    if ((newDynamicTop|0) > (totalMemory|0)) {
-      if ((enlargeMemory()|0) == 0) {
-        HEAP32[DYNAMICTOP_PTR>>2] = oldDynamicTop;
-        ___setErrNo({{{ cDefine('ENOMEM') }}});
-        return -1;
-      }
-    }
-#endif
-    return oldDynamicTop|0;
-  },
-
-  brk__asm: true,
-  brk__sig: ['ii'],
-  brk: function(newDynamicTop) {
-    newDynamicTop = newDynamicTop|0;
-    var oldDynamicTop = 0;
-    var totalMemory = 0;
-#if USE_PTHREADS
-    totalMemory = getTotalMemory()|0;
-    // Asking to increase dynamic top to a too high value? In pthreads builds we cannot
-    // enlarge memory, so this needs to fail.
-    if ((newDynamicTop|0) < 0 | (newDynamicTop|0) > (totalMemory|0)) {
-#if ABORTING_MALLOC
-      abortOnCannotGrowMemory()|0;
-#else
-      ___setErrNo({{{ cDefine('ENOMEM') }}});
-      return -1;
-#endif
-    }
-    Atomics_store(HEAP32, DYNAMICTOP_PTR>>2, newDynamicTop|0)|0;
-#else // singlethreaded build: (-s USE_PTHREADS=0)
-    if ((newDynamicTop|0) < 0) {
-#if ABORTING_MALLOC
-      abortOnCannotGrowMemory()|0;
-#endif
-      ___setErrNo({{{ cDefine('ENOMEM') }}});
-      return -1;
-    }
-
-    oldDynamicTop = HEAP32[DYNAMICTOP_PTR>>2]|0;
-    HEAP32[DYNAMICTOP_PTR>>2] = newDynamicTop;
-    totalMemory = getTotalMemory()|0;
-    if ((newDynamicTop|0) > (totalMemory|0)) {
-      if ((enlargeMemory()|0) == 0) {
-        ___setErrNo({{{ cDefine('ENOMEM') }}});
-        HEAP32[DYNAMICTOP_PTR>>2] = oldDynamicTop;
-        return -1;
-      }
-    }
-#endif
-    return 0;
-  },
-
   system__deps: ['__setErrNo'],
   system: function(command) {
     // int system(const char *command);
@@ -4316,6 +4211,119 @@ LibraryManager.library = {
     var str = x + '';
     if (to) return stringToUTF8(str, to, max);
     else return lengthBytesUTF8(str);
+  },
+
+  emscripten_get_total_memory: function() {
+    return TOTAL_MEMORY;
+  },
+
+  emscripten_enlarge_memory: function() {
+#if USE_PTHREADS
+    // pthreads cannot grow memory, for now
+#if ABORTING_MALLOC
+    abort('Cannot enlarge memory arrays, since compiling with pthreads support enabled (-s USE_PTHREADS=1).');
+#else // ABORTING_MALLOC
+    return 0; // failure
+#endif // ABORTING_MALLOC
+#else // USE_PTHREADS
+#if ALLOW_MEMORY_GROWTH == 0
+#if ABORTING_MALLOC
+    abortOnCannotGrowMemory();
+#else
+    return false; // malloc will report failure
+#endif
+#else
+    // TOTAL_MEMORY is the current size of the actual array, and DYNAMICTOP is the new top.
+#if ASSERTIONS
+    assert(HEAP32[DYNAMICTOP_PTR>>2] > TOTAL_MEMORY); // This function should only ever be called after the ceiling of the dynamic heap has already been bumped to exceed the current total size of the asm.js heap.
+#endif
+
+#if EMSCRIPTEN_TRACING
+    // Report old layout one last time
+    _emscripten_trace_report_memory_layout();
+#endif
+
+    var PAGE_MULTIPLE = {{{ getPageSize() }}};
+    var LIMIT = 2147483648 - PAGE_MULTIPLE; // We can do one page short of 2GB as theoretical maximum.
+
+    if (HEAP32[DYNAMICTOP_PTR>>2] > LIMIT) {
+#if ASSERTIONS
+      err('Cannot enlarge memory, asked to go up to ' + HEAP32[DYNAMICTOP_PTR>>2] + ' bytes, but the limit is ' + LIMIT + ' bytes!');
+#endif
+      return false;
+    }
+
+    var OLD_TOTAL_MEMORY = TOTAL_MEMORY;
+    TOTAL_MEMORY = Math.max(TOTAL_MEMORY, MIN_TOTAL_MEMORY); // So the loop below will not be infinite, and minimum asm.js memory size is 16MB.
+
+    while (TOTAL_MEMORY < HEAP32[DYNAMICTOP_PTR>>2]) { // Keep incrementing the heap size as long as it's less than what is requested.
+      if (TOTAL_MEMORY <= 536870912) {
+        TOTAL_MEMORY = alignUp(2 * TOTAL_MEMORY, PAGE_MULTIPLE); // Simple heuristic: double until 1GB...
+      } else {
+        // ..., but after that, add smaller increments towards 2GB, which we cannot reach
+        TOTAL_MEMORY = Math.min(alignUp((3 * TOTAL_MEMORY + 2147483648) / 4, PAGE_MULTIPLE), LIMIT);
+#if ASSERTIONS
+        if (TOTAL_MEMORY === OLD_TOTAL_MEMORY) {
+          warnOnce('Cannot ask for more memory since we reached the practical limit in browsers (which is just below 2GB), so the request would have failed. Requesting only ' + TOTAL_MEMORY);
+        }
+#endif
+      }
+    }
+
+#if WASM_MEM_MAX != -1
+    // A limit was set for how much we can grow. We should not exceed that
+    // (the wasm binary specifies it, so if we tried, we'd fail anyhow). That is,
+    // if we are at say 64MB, and the max is 100MB, then we should *not* try to
+    // grow 64->128MB which is the default behavior (doubling), as 128MB will
+    // fail because of the max limit. Instead, we should only try to grow
+    // 64->100MB in this example, which has a chance of succeeding (but may
+    // still fail for another reason, of actually running out of memory).
+    TOTAL_MEMORY = Math.min(TOTAL_MEMORY, {{{ WASM_MEM_MAX }}});
+    if (TOTAL_MEMORY == OLD_TOTAL_MEMORY) {
+#if ASSERTIONS
+      err('Failed to grow the heap from ' + OLD_TOTAL_MEMORY + ', as we reached the WASM_MEM_MAX limit (' + {{{ WASM_MEM_MAX }}} + ') set during compilation');
+#endif
+      // restore the state to before this call, we failed
+      TOTAL_MEMORY = OLD_TOTAL_MEMORY;
+      return false;
+    }
+#endif
+
+#if ASSERTIONS
+    var start = Date.now();
+#endif
+
+    var replacement = Module['reallocBuffer'](TOTAL_MEMORY);
+    if (!replacement || replacement.byteLength != TOTAL_MEMORY) {
+#if ASSERTIONS
+      err('Failed to grow the heap from ' + OLD_TOTAL_MEMORY + ' bytes to ' + TOTAL_MEMORY + ' bytes, not enough memory!');
+      if (replacement) {
+        err('Expected to get back a buffer of size ' + TOTAL_MEMORY + ' bytes, but instead got back a buffer of size ' + replacement.byteLength);
+      }
+#endif
+      // restore the state to before this call, we failed
+      TOTAL_MEMORY = OLD_TOTAL_MEMORY;
+      return false;
+    }
+
+    // everything worked
+
+    updateGlobalBuffer(replacement);
+    updateGlobalBufferViews();
+
+#if ASSERTIONS && !WASM
+    err('Warning: Enlarging memory arrays, this is not fast! ' + [OLD_TOTAL_MEMORY, TOTAL_MEMORY]);
+#endif
+
+#if EMSCRIPTEN_TRACING
+    _emscripten_trace_js_log_message("Emscripten", "Enlarging memory arrays from " + OLD_TOTAL_MEMORY + " to " + TOTAL_MEMORY);
+    // And now report the new layout
+    _emscripten_trace_report_memory_layout();
+#endif
+
+    return true;
+#endif // ALLOW_MEMORY_GROWTH
+#endif // USE_PTHREADS
   },
 
   //============================

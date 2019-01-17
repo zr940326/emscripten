@@ -266,6 +266,8 @@ emscripten_coroutine emscripten_coroutine_create(em_arg_callback_func func, void
 int emscripten_coroutine_next(emscripten_coroutine);
 void emscripten_yield(void);
 
+void* emscripten_get_total_memory();
+void emscripten_enlarge_memory();
 
 #ifdef __cplusplus
 }
