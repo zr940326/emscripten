@@ -14,8 +14,9 @@ static void** DYNAMICTOP_PTR;
 #define PTR_GT(x, y) (((char*)x) > ((char*)y))
 
 // Initialization.
-// TODO: handle this entirely in compiled code, which is possible if we no
-//       longer allow dynamicAlloc in JS.
+// TODO: this could be an extern global, once lld supports us importing them,
+//       https://bugs.llvm.org/show_bug.cgi?id=40364
+//       (it already works for asm.js)
 EMSCRIPTEN_KEEPALIVE void __init_sbrk(void** value) {
   DYNAMICTOP_PTR = value;
 }
