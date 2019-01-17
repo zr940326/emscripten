@@ -13,9 +13,10 @@ static void** DYNAMICTOP_PTR;
 #define PTR_ADD(x, y) ((void*)(((char*)x) + y))
 #define PTR_GT(x, y) (((char*)x) > ((char*)y))
 
-// TODO: initialize this more efficiently by hardcoding the value at compile
-//       time, when not linkable.
-EMSCRIPTEN_KEEPALIVE void init_memory(void** value) {
+// Initialization.
+// TODO: handle this entirely in compiled code, which is possible if we no
+//       longer allow dynamicAlloc in JS.
+EMSCRIPTEN_KEEPALIVE void __init_sbrk(void** value) {
   DYNAMICTOP_PTR = value;
 }
 

@@ -1288,7 +1288,7 @@ function addOnPostRun(cb) {
 
 // FIXME: hardcode this value at compile time
 addOnInit(function() {
-  if (Module['_init_memory']) Module['_init_memory'](DYNAMICTOP_PTR);
+  if (Module['___init_sbrk']) Module['___init_sbrk'](DYNAMICTOP_PTR);
 });
 
 // Deprecated: This function should not be called because it is unsafe and does not provide
