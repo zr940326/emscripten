@@ -86,6 +86,7 @@ def calculate(temp_files, in_temp, stdout_, stderr_, forced=[]):
 
   # XXX We also need to add libc symbols that use malloc, for example strdup. It's very rare to use just them and not
   #     a normal malloc symbol (like free, after calling strdup), so we haven't hit this yet, but it is possible.
+  malloc_symbols = read_symbols(shared.path_from_root('system', 'lib', 'malloc.symbols'))
   libc_symbols = read_symbols(shared.path_from_root('system', 'lib', 'libc.symbols'))
   libcxx_symbols = read_symbols(shared.path_from_root('system', 'lib', 'libcxx', 'symbols'))
   libcxxabi_symbols = read_symbols(shared.path_from_root('system', 'lib', 'libcxxabi', 'symbols'))
@@ -610,7 +611,7 @@ def calculate(temp_files, in_temp, stdout_, stderr_, forced=[]):
                  Library('libal',         ext, create_al,          al_symbols,          [libc_name],   False), # noqa
                  Library('libhtml5',      ext, create_html5,       html5_symbols,       [],            False), # noqa
                  Library('libcompiler_rt','a', create_compiler_rt, compiler_rt_symbols, [libc_name],   False), # noqa
-                 Library(malloc_name(),   ext, create_malloc,      [],                  [],            False)] # noqa
+                 Library(malloc_name(),   ext, create_malloc,      malloc_symbols,      [],            False)] # noqa
 
   if shared.Settings.USE_PTHREADS:
     system_libs += [Library('libpthreads',       ext, create_pthreads,       pthreads_symbols,       [libc_name],  False), # noqa
