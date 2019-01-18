@@ -4,7 +4,7 @@
 #include <emscripten.h>
 
 /*
- * Simple sbrk implementation for emscripten.
+ * Very simple sbrk implementation for emscripten.
  */
 
 // The location in memory of the current brk, that is, the top of memory.
