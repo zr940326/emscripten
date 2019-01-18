@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <errno.h>
 #include <unistd.h>
 
@@ -28,8 +29,10 @@ int brk(void* new) {
 
   // Perform a compare-and-swap loop to update the new dynamic top value. This is because
   // this function can becalled simultaneously in multiple threads.
+  void* seen;
+  void* old;
   do {
-    void* old = __c11_atomic_load((_Atomic size_t*)*DYNAMICTOP_PTR, __ATOMIC_SEQ_CST);
+    old = (void*)__c11_atomic_load((_Atomic size_t*)*DYNAMICTOP_PTR, __ATOMIC_SEQ_CST);
     // Asking to increase dynamic top to a too high value? In pthreads builds we cannot
     // enlarge memory, so this needs to fail.
     if (PTR_GT(new, total)) {
@@ -42,7 +45,7 @@ int brk(void* new) {
     // Attempt to update the dynamic top to new value. Another thread may have beat this thread to the update,
     // in which case we will need to start over by iterating the loop body again.
     
-    void* seen = __c11_atomic_compare_exchange_strong((_Atomic size_t*)DYNAMICTOP_PTR, &old, new, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+    __c11_atomic_compare_exchange_strong((_Atomic size_t*)DYNAMICTOP_PTR, &seen, new, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
   } while(seen != old);
 
 #else // singlethreaded build: (-s USE_PTHREADS=0)
