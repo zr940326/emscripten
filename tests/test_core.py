@@ -20,7 +20,7 @@ from textwrap import dedent
 if __name__ == '__main__':
   raise Exception('do not run this file directly; do something like: tests/runner.py')
 
-from tools.shared import Building, STDOUT, PIPE, run_js, run_process, try_delete
+from tools.shared import Building, STDOUT, PIPE, run_js, run_process, check_call, try_delete
 from tools.shared import NODE_JS, V8_ENGINE, JS_ENGINES, SPIDERMONKEY_ENGINE, PYTHON, EMCC, EMAR, WINDOWS, AUTODEBUGGER
 from tools import jsrun, shared
 from runner import RunnerCore, path_from_root, core_test_modes, get_bullet_library, get_freetype_library, get_poppler_library
@@ -6004,11 +6004,10 @@ return malloc(size);
   # Autodebug the code
   def do_autodebug(self, filename):
     Building.llvm_dis(filename)
-    output = run_process([PYTHON, AUTODEBUGGER, filename + '.o.ll', filename + '.o.ll.ll'], stdout=PIPE, stderr=self.stderr_redirect).stdout
-    assert 'Success.' in output, output
+    check_call([PYTHON, AUTODEBUGGER, filename + '.o.ll', filename + '.autodebug.ll'], stdout=PIPE, stderr=self.stderr_redirect)
     # rebuild .bc
     # TODO: use code in do_autodebug_post for this
-    self.prep_ll_run(filename, filename + '.o.ll.ll', force_recompile=True)
+    self.prep_ll_run(filename, filename + '.autodebug.ll', force_recompile=True)
 
   # Autodebug the code, after LLVM opts. Will only work once!
   def do_autodebug_post(self, filename):
@@ -6018,8 +6017,7 @@ return malloc(size);
       return True
     print('Autodebugging during post time')
     delattr(self, 'post')
-    output = run_process([PYTHON, AUTODEBUGGER, filename + '.o.ll', filename + '.o.ll.ll'], stdout=PIPE, stderr=self.stderr_redirect).stdout
-    assert 'Success.' in output, output
+    check_call([PYTHON, AUTODEBUGGER, filename + '.o.ll', filename + '.o.ll.ll'], stdout=PIPE, stderr=self.stderr_redirect)
     shutil.copyfile(filename + '.o.ll.ll', filename + '.o.ll')
     Building.llvm_as(filename)
     Building.llvm_dis(filename)
@@ -6041,7 +6039,7 @@ return malloc(size);
     self.do_autodebug(filename)
 
     # Compare to each other, and to expected output
-    self.do_ll_run(filename + '.o.ll.ll', 'AD:-1,1')
+    self.do_ll_run(filename + '.autodebug.ll', 'AD:-1,1')
 
     # Test using build_ll_hook
     src = '''
@@ -7037,7 +7035,10 @@ err = err = function(){};
       self.assertPathsIdentical(os.path.abspath('src.cpp'), m['source'])
       seen_lines.add(m['originalLine'])
     # ensure that all the 'meaningful' lines in the original code get mapped
-    assert seen_lines.issuperset([6, 7, 11, 12])
+    if is_optimizing(self.emcc_args):
+      assert seen_lines.issuperset([6, 10, 11, 12])
+    else:
+      assert seen_lines.issuperset([6, 7, 10, 11, 12])
 
   def test_modularize_closure_pre(self):
     # test that the combination of modularize + closure + pre-js works. in that mode,

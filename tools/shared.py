@@ -1908,7 +1908,7 @@ class Building(object):
     return target
 
   @staticmethod
-  def link_lld(args, target, opts=[], lto_level=0):
+  def link_lld(args, target, opts):
     # runs lld to link things.
     # lld doesn't currently support --start-group/--end-group since the
     # semantics are more like the windows linker where there is no need for
@@ -1930,7 +1930,6 @@ class Building(object):
         '__wasm_call_ctors',
         '--export',
         '__data_end',
-        '--lto-O%d' % lto_level,
     ] + args
 
     if Settings.WASM_MEM_MAX != -1:
