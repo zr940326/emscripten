@@ -26,6 +26,9 @@ void *ThreadMain(void *arg)
   attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
 
   attr.onsuccess = [](emscripten_fetch_t *fetch) {
+#if FILE_DOES_NOT_EXIST
+    assert(false && "onsuccess handler called, but the file shouldn't exist"); // Shouldn't reach here if the file doesn't exist
+#endif
     assert(fetch);
     printf("Finished downloading %llu bytes\n", fetch->numBytes);
     assert(fetch->url);
@@ -68,12 +71,19 @@ void *ThreadMain(void *arg)
 
   attr.onerror = [](emscripten_fetch_t *fetch) {
     printf("Download failed!\n");
+#ifndef FILE_DOES_NOT_EXIST
+    assert(false && "onerror handler called, but the transfer should have succeeded!"); // The file exists, shouldn't reach here.
+#endif
     assert(fetch);
     assert(fetch->id != 0);
     assert(!strcmp(fetch->url, "gears.png"));
     assert((uintptr_t)fetch->userData == 0x12345678);
+    emscripten_fetch_close(fetch);
 
 #ifdef REPORT_RESULT
+#ifdef FILE_DOES_NOT_EXIST
+    result = 1;
+#endif
     REPORT_RESULT(result);
 #endif
   };

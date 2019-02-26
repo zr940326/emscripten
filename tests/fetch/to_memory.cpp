@@ -82,6 +82,7 @@ int main()
     assert(fetch->id != 0);
     assert(!strcmp(fetch->url, "gears.png"));
     assert((uintptr_t)fetch->userData == 0x12345678);
+    emscripten_fetch_close(fetch);
 
 #ifdef REPORT_RESULT
 #ifdef FILE_DOES_NOT_EXIST

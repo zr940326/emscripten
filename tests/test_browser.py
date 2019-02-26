@@ -4141,7 +4141,12 @@ window.close = function() {
     self.btest('fetch/response_headers.cpp', expected='1', args=['--std=c++11', '-s', 'FETCH_DEBUG=1', '-s', 'FETCH=1', '-s', 'USE_PTHREADS=1', '-s', 'PROXY_TO_PTHREAD=1'], also_asmjs=True)
 
   def test_fetch_to_memory_pthread(self):
+    self.btest('fetch/to_memory_pthread.cpp',
+               expected='1',
+               args=['--std=c++11', '-s', 'FETCH_DEBUG=1', '-s', 'FETCH=1', '-s', 'USE_PTHREADS=1', '-DFILE_DOES_NOT_EXIST'])
+
     shutil.copyfile(path_from_root('tests', 'gears.png'), 'gears.png')
+
     self.btest('fetch/to_memory_pthread.cpp',
                expected='1',
                args=['--std=c++11', '-s', 'FETCH_DEBUG=1', '-s', 'FETCH=1', '-s', 'USE_PTHREADS=1'])
