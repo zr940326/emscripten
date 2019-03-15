@@ -1222,19 +1222,7 @@ var OFFSCREENCANVAS_SUPPORT = 0;
 
 // If set to 1, enables support for WebGL contexts to render to an offscreen
 // render target, to avoid the implicit swap behavior of WebGL where exiting any
-// event callback would automatically perform a "flip" to present rendered
-// content on screen. When an Emscripten GL context has Offscreen Framebuffer
-// enabled, a single frame can be composited from multiple event callbacks, and
-// the swap function emscripten_webgl_commit_frame() is then explicitly called
-// to present the rendered content on screen.
-//
-// The OffscreenCanvas feature also enables explicit GL frame swapping support,
-// and also, -s OFFSCREEN_FRAMEBUFFER=1 feature can be used to polyfill support
-// for accessing WebGL in multiple threads in the absence of OffscreenCanvas
-// support in browser, at the cost of some performance and latency.
-// OffscreenCanvas and Offscreen Framebuffer support can be enabled at the same
-// time, and allows one to utilize OffscreenCanvas where available, and to fall
-// back to Offscreen Framebuffer otherwise.
+// event callback.
 var OFFSCREEN_FRAMEBUFFER = 0;
 
 // If nonzero, Fetch API (and hence ASMFS) supports backing to IndexedDB. If 0, IndexedDB is not utilized. Set to 0 if

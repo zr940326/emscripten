@@ -763,9 +763,6 @@ var LibraryGL = {
 #if GL_ASSERTIONS
       assert(handle, 'malloc() failed in GL.registerContext!');
 #endif
-#if GL_SUPPORT_EXPLICIT_SWAP_CONTROL
-      {{{ makeSetValue('handle', 0, 'webGLContextAttributes.explicitSwapControl', 'i32')}}}; // explicitSwapControl
-#endif
 #if USE_PTHREADS
       {{{ makeSetValue('handle', 4, '_pthread_self()', 'i32')}}}; // the thread pointer of the thread that owns the control of the context
 #endif

@@ -454,7 +454,6 @@ typedef struct EmscriptenWebGLContextAttributes {
   int minorVersion;
 
   EM_BOOL enableExtensionsByDefault;
-  EM_BOOL explicitSwapControl;
   EMSCRIPTEN_WEBGL_CONTEXT_PROXY_MODE proxyContextToMainThread;
   EM_BOOL renderViaOffscreenBackBuffer;
 } EmscriptenWebGLContextAttributes;
@@ -480,8 +479,6 @@ extern EMSCRIPTEN_RESULT emscripten_set_webglcontextlost_callback_on_thread(cons
 extern EMSCRIPTEN_RESULT emscripten_set_webglcontextrestored_callback_on_thread(const char *target, void *userData, EM_BOOL useCapture, em_webgl_context_callback callback, pthread_t targetThread);
 
 extern EM_BOOL emscripten_is_webgl_context_lost(EMSCRIPTEN_WEBGL_CONTEXT_HANDLE context);
-
-extern EMSCRIPTEN_RESULT emscripten_webgl_commit_frame(void);
 
 extern EM_BOOL emscripten_supports_offscreencanvas(void);
 

@@ -1163,7 +1163,7 @@ var LibraryBrowser = {
 
   // Runs natively in pthread, no __proxy needed.
 #if OFFSCREEN_FRAMEBUFFER
-  emscripten_set_main_loop__deps: ['emscripten_set_main_loop_timing', 'emscripten_get_now', 'emscripten_webgl_commit_frame'],
+  emscripten_set_main_loop__deps: ['emscripten_set_main_loop_timing', 'emscripten_get_now'],
 #else
   emscripten_set_main_loop__deps: ['emscripten_set_main_loop_timing', 'emscripten_get_now'],
 #endif
@@ -1232,22 +1232,6 @@ var LibraryBrowser = {
       // VBO double-buffering and reduce GPU stalls.
 #if FULL_ES2 || LEGACY_GL_EMULATION
       GL.newRenderingFrameStarted();
-#endif
-
-#if USE_PTHREADS && OFFSCREEN_FRAMEBUFFER && GL_SUPPORT_EXPLICIT_SWAP_CONTROL
-      // If the current GL context is a proxied regular WebGL context, and was initialized with implicit swap mode on the main thread, and we are on the parent thread,
-      // perform the swap on behalf of the user.
-      if (typeof GL !== 'undefined' && GL.currentContext && GL.currentContextIsProxied) {
-        var explicitSwapControl = {{{ makeGetValue('GL.currentContext', 0, 'i32') }}};
-        if (!explicitSwapControl) _emscripten_webgl_commit_frame();
-      }
-#endif
-
-#if OFFSCREENCANVAS_SUPPORT
-      // If the current GL context is an OffscreenCanvas, but it was initialized with implicit swap mode, perform the swap on behalf of the user.
-      if (typeof GL !== 'undefined' && GL.currentContext && !GL.currentContextIsProxied && !GL.currentContext.attributes.explicitSwapControl && GL.currentContext.GLctx.commit) {
-        GL.currentContext.GLctx.commit();
-      }
 #endif
 
       if (Browser.mainLoop.method === 'timeout' && Module.ctx) {

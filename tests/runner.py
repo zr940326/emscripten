@@ -722,10 +722,10 @@ class RunnerCore(unittest.TestCase):
     return ret
 
   def get_library(self, name, generated_libs, configure=['sh', './configure'],
-                  configure_args=[], make=['make'], make_args='help',
+                  configure_args=[], make=['make'], make_args=None,
                   cache=True, env_init={}, cache_name_extra='', native=False):
-    if make_args == 'help':
-      make_args = ['-j', str(multiprocessing.cpu_count())]
+    if make_args is None:
+      make_args = ['-j', str(Building.get_num_cores())]
 
     build_dir = self.get_build_dir()
     output_dir = self.get_dir()

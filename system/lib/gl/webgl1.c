@@ -12,7 +12,6 @@
 
 extern EMSCRIPTEN_WEBGL_CONTEXT_HANDLE emscripten_webgl_do_create_context(const char *target, const EmscriptenWebGLContextAttributes *attributes);
 extern EMSCRIPTEN_RESULT emscripten_webgl_make_context_current_calling_thread(EMSCRIPTEN_WEBGL_CONTEXT_HANDLE context);
-extern EMSCRIPTEN_RESULT emscripten_webgl_do_commit_frame(void);
 extern EM_BOOL emscripten_supports_offscreencanvas(void);
 extern EMSCRIPTEN_WEBGL_CONTEXT_HANDLE emscripten_webgl_do_get_current_context(void);
 extern void _emscripten_proxied_gl_context_activated_from_main_browser_thread(EMSCRIPTEN_WEBGL_CONTEXT_HANDLE context);
@@ -82,15 +81,6 @@ EMSCRIPTEN_RESULT emscripten_webgl_make_context_current(EMSCRIPTEN_WEBGL_CONTEXT
 EMSCRIPTEN_WEBGL_CONTEXT_HANDLE emscripten_webgl_get_current_context(void)
 {
   return (EMSCRIPTEN_WEBGL_CONTEXT_HANDLE)pthread_getspecific(currentActiveWebGLContext);
-}
-
-EMSCRIPTEN_RESULT EMSCRIPTEN_KEEPALIVE emscripten_webgl_commit_frame(void)
-{
-  GL_FUNCTION_TRACE(__func__);
-  if (pthread_getspecific(currentThreadOwnsItsWebGLContext))
-    return emscripten_webgl_do_commit_frame();
-  else
-    return (EMSCRIPTEN_RESULT)emscripten_sync_run_in_main_runtime_thread(EM_FUNC_SIG_I, &emscripten_webgl_do_commit_frame);
 }
 
 static void *memdup(const void *ptr, size_t sz)

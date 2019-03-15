@@ -313,9 +313,7 @@
          U emscripten_glWaitSync
          U emscripten_supports_offscreencanvas
          U emscripten_sync_run_in_main_runtime_thread_
--------- T emscripten_webgl_commit_frame
 -------- T emscripten_webgl_create_context
-         U emscripten_webgl_do_commit_frame
          U emscripten_webgl_do_create_context
          U emscripten_webgl_make_context_current_calling_thread
 -------- T emscripten_webgl_get_current_context

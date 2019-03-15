@@ -68,21 +68,12 @@ void CreateThread()
   emscripten_atomic_store_u32(&threadRunning, 1);
 }
 
-//#define TEST_MAIN_THREAD_EXPLICIT_COMMIT
-
 void MainThreadRender()
 {
   static double color = 0;
   color += 0.01;
   glClearColor(0, color, 0, 1);
   glClear(GL_COLOR_BUFFER_BIT);
-#ifdef TEST_MAIN_THREAD_EXPLICIT_COMMIT
-  EMSCRIPTEN_RESULT r = emscripten_webgl_commit_frame();
-  assert(r == EMSCRIPTEN_RESULT_SUCCESS);
-  // In explicit swap control mode, whatever we draw here shouldn't show up.
-  glClearColor(1, 0, 1, 1);
-  glClear(GL_COLOR_BUFFER_BIT);
-#endif
 #
   if (color >= 1.0)
   {
@@ -100,9 +91,6 @@ void PollThreadExit(void *)
   {
     EmscriptenWebGLContextAttributes attr;
     emscripten_webgl_init_context_attributes(&attr);
-#ifdef TEST_MAIN_THREAD_EXPLICIT_COMMIT
-    attr.explicitSwapControl = EM_TRUE;
-#endif
     ctx = emscripten_webgl_create_context("#canvas", &attr);
     emscripten_webgl_make_context_current(ctx);
     printf("Main thread rendering. You should see the WebGL canvas fade from black to green.\n");

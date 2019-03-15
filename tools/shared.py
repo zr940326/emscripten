@@ -1706,7 +1706,7 @@ class Building(object):
                     configure=['sh', './configure'],
                     configure_args=[],
                     make=['make'],
-                    make_args='help',
+                    make_args=None,
                     cache=None,
                     cache_name=None,
                     copy_project=False,
@@ -1724,7 +1724,7 @@ class Building(object):
       generated_libs = [generated_libs]
     if source_dir is None:
       source_dir = path_from_root('tests', name.replace('_native', ''))
-    if make_args == 'help':
+    if make_args == None:
       make_args = ['-j', str(multiprocessing.cpu_count())]
 
     temp_dir = build_dir
