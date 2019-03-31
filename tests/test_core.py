@@ -284,7 +284,7 @@ class TestCoreBase(RunnerCore):
     for text, output in [('fleefl', '892BDB6FD3F62E863D63DA55851700FDE3ACF30204798CE9'),
                          ('fleefl2', 'AA2CC5F96FC9D540CA24FDAF1F71E2942753DB83E8A81B61'),
                          ('64bitisslow', '64D8470573635EC354FEE7B7F87C566FCAF1EFB491041670')]:
-      self.do_run('', 'hash value: ' + output, [text], no_build=True)
+      self.do_run('src.cpp.o.js', 'hash value: ' + output, [text], no_build=True)
 
   def test_unaligned(self):
     self.skipTest('LLVM marks the reads of s as fully aligned, making this test invalid')
@@ -562,6 +562,12 @@ class TestCoreBase(RunnerCore):
     # Generated code includes getelementptr (getelementptr, 0, 1), i.e., GEP as the first param to GEP
     self.do_run_in_out_file_test('tests', 'core', 'test_getgep')
 
+  # No compiling from C/C++ - just process an existing .o/.ll/.bc file.
+  def do_run_object(self, obj_file, expected_output=None, **kwargs):
+    js_file = obj_file + '.js'
+    Building.emcc(obj_file, self.get_emcc_args(), js_file)
+    self.do_run(js_file, expected_output, no_build=True, **kwargs)
+
   def test_multiply_defined_symbols(self):
     create_test_file('a1.c', 'int f() { return 1; }')
     create_test_file('a2.c', 'void x() {}')
@@ -587,7 +593,7 @@ class TestCoreBase(RunnerCore):
 
     Building.link_to_object(['main.c.o', 'liba.a', 'libb.a'], 'all.o')
 
-    self.do_ll_run('all.o', 'result: 1')
+    self.do_run_object('all.o', 'result: 1')
 
   def test_if(self):
     self.do_run_in_out_file_test('tests', 'core', 'test_if')
@@ -1035,9 +1041,9 @@ int main(int argc, char **argv)
     print('0')
     self.do_run(src, 'Caught C string: a c string\nDone.', ['0'])
     print('1')
-    self.do_run(src, 'Caught exception: std::exception\nDone.', ['1'], no_build=True)
+    self.do_run(None, 'Caught exception: std::exception\nDone.', ['1'], no_build=True)
     print('2')
-    self.do_run(src, 'Caught exception: Hello\nDone.', ['2'], no_build=True)
+    self.do_run(None, 'Caught exception: Hello\nDone.', ['2'], no_build=True)
 
   def test_exceptions_white_list(self):
     self.set_setting('DISABLE_EXCEPTION_CATCHING', 2)
@@ -5776,10 +5782,10 @@ return malloc(size);
       print('lto:', lto)
       if lto == 1:
         self.emcc_args += ['--llvm-lto', '1']
-      self.do_ll_run(bitcode, pyoutput, args=['-S', '-c', pyscript])
+      self.do_run_object(bitcode, pyoutput, args=['-S', '-c', pyscript])
 
   def test_lifetime(self):
-    self.do_ll_run(path_from_root('tests', 'lifetime.ll'), 'hello, world!\n')
+    self.do_run_object(path_from_root('tests', 'lifetime.ll'), 'hello, world!\n')
     if '-O1' in self.emcc_args or '-O2' in self.emcc_args:
       assert 'a18' not in open('src.cpp.o.js').read(), 'lifetime stuff and their vars must be culled'
 
@@ -5879,7 +5885,7 @@ return malloc(size);
           self.emcc_args += json.loads(open(shortname + '.emcc').read())
 
         with env_modify({'EMCC_LEAVE_INPUTS_RAW': leave_inputs}):
-          self.do_ll_run(path_from_root('tests', 'cases', name), output)
+          self.do_run_object(path_from_root('tests', 'cases', name), output)
 
       # Optional source checking, a python script that gets a global generated with the source
       src_checker = path_from_root('tests', 'cases', shortname + '.py')
@@ -5953,7 +5959,7 @@ return malloc(size);
     do_autodebug(filename)
 
     # Compare to each other, and to expected output
-    self.do_ll_run(filename + '.o.ll.ll', 'AD:-1,1')
+    self.do_run_object(filename + '.o.ll.ll', 'AD:-1,1')
 
     # Test using build_ll_hook
     src = '''

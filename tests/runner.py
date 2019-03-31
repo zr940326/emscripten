@@ -461,10 +461,6 @@ class RunnerCore(unittest.TestCase):
     # TODO(sbc): We should probably unify Building.COMPILER_TEST_OPTS and self.emcc_args
     return self.serialize_settings() + self.emcc_args + Building.COMPILER_TEST_OPTS
 
-  # Generate JS from ll
-  def ll_to_js(self, filename):
-    Building.emcc(filename + '.o', self.get_emcc_args(), filename + '.o.js')
-
   # Build JavaScript code from source code
   def build(self, src, dirname, filename, main_file=None,
             additional_files=[], libraries=[], includes=[], build_ll_hook=None,
@@ -524,7 +520,7 @@ class RunnerCore(unittest.TestCase):
       self.prep_ll_run(filename, object_file, build_ll_hook=build_ll_hook)
 
       # BC => JS
-      self.ll_to_js(filename)
+      Building.emcc(object_file, self.get_emcc_args(), object_file + '.js')
     else:
       # "fast", new path: just call emcc and go straight to JS
       all_files = [filename] + additional_files + libraries
@@ -956,15 +952,23 @@ class RunnerCore(unittest.TestCase):
       basename = 'src.c'
       Building.COMPILER = to_cc(Building.COMPILER)
 
-    dirname = self.get_dir()
-    filename = os.path.join(dirname, basename)
-    if not no_build:
-      self.build(src, dirname, filename, main_file=main_file, additional_files=additional_files, libraries=libraries, includes=includes,
+    if no_build:
+      if src:
+        js_file = src
+      else:
+        js_file = basename + '.o.js'
+    else:
+      dirname = self.get_dir()
+      filename = os.path.join(dirname, basename)
+      self.build(src, dirname, filename, main_file=main_file,
+                 additional_files=additional_files, libraries=libraries,
+                 includes=includes,
                  build_ll_hook=build_ll_hook, post_build=post_build)
+      js_file = filename + '.o.js'
+    self.assertExists(js_file)
 
     # Run in both JavaScript engines, if optimizing - significant differences there (typed arrays)
     js_engines = self.filtered_js_engines(js_engines)
-    js_file = filename + '.o.js'
     if len(js_engines) == 0:
       self.skipTest('No JS engine present to run this test with. Check %s and the paths therein.' % EM_CONFIG)
     if len(js_engines) > 1 and not self.use_all_engines:
@@ -987,31 +991,11 @@ class RunnerCore(unittest.TestCase):
           print('(test did not pass in JS engine: %s)' % engine)
           raise
 
-    # shutil.rmtree(dirname) # TODO: leave no trace in memory. But for now nice for debugging
-
     if self.save_JS:
       global test_index
       self.hardcode_arguments(js_file, args)
       shutil.copyfile(js_file, os.path.join(TEMP_DIR, str(test_index) + '.js'))
       test_index += 1
-
-  # No building - just process an existing .ll file (or .bc, which we turn into .ll)
-  def do_ll_run(self, ll_file, expected_output=None, args=[], js_engines=None,
-                output_nicerizer=None, force_recompile=False,
-                build_ll_hook=None, assert_returncode=None):
-    filename = os.path.join(self.get_dir(), 'src.cpp')
-
-    self.prep_ll_run(filename, ll_file, force_recompile, build_ll_hook)
-
-    self.ll_to_js(filename)
-
-    self.do_run(None,
-                expected_output,
-                args,
-                no_build=True,
-                js_engines=js_engines,
-                output_nicerizer=output_nicerizer,
-                assert_returncode=assert_returncode)
 
 
 # Run a server and a web page. When a test runs, we tell the server about it,
