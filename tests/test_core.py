@@ -564,7 +564,7 @@ class TestCoreBase(RunnerCore):
 
   # No compiling from C/C++ - just process an existing .o/.ll/.bc file.
   def do_run_object(self, obj_file, expected_output=None, **kwargs):
-    js_file = obj_file + '.js'
+    js_file = os.path.basename(obj_file) + '.js'
     Building.emcc(obj_file, self.get_emcc_args(), js_file)
     self.do_run(js_file, expected_output, no_build=True, **kwargs)
 
