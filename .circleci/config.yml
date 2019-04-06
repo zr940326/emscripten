@@ -60,7 +60,7 @@ test-chrome: &test-chrome
           export EMTEST_BROWSER="xvfb-run -a -e /dev/stdout /usr/bin/google-chrome-unstable $CHROME_FLAGS_BASE $CHROME_FLAGS_WASM"
           export EMTEST_LACKS_GRAPHICS_HARDWARE=1
           export EMCC_CORES=4
-          ./emscripten/tests/runner.py browser skip:test_pthread*
+          ./emscripten/tests/runner.py browser skip:browser.test_pthread*
 
 version: 2
 jobs:
